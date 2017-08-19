@@ -19,7 +19,7 @@ class RenderLoop::Private
 public:
     ~Private() {
         //updateNativeSurface(nullptr); // ensure not joinable
-        if (render_thread.joinable())
+        if (render_thread.joinable()) // already not joinable by updateNativeSurface(nullptr) or show() return
             std::cerr << "rendering thread should not be joinable" << std::endl << std::flush;
         assert(!render_thread.joinable() && "rendering thread should not be joinable");
         delete psurface;
@@ -125,8 +125,6 @@ void RenderLoop::run()
         while (d->psurface->popEvent(e, 0)) { // do no always try pop
             if (e.type == PlatformSurface::Event::Close) {
                 std::cout << "PlatformSurface::Event::Close" << std::endl << std::flush;
-                onClose();
-                d->sem.release();
                 // TODO: continue until dtor is called?
                 goto end;
             } else if (e.type == PlatformSurface::Event::Resize) {
@@ -143,9 +141,9 @@ void RenderLoop::run()
             submitRenderContext(d->psurface);
     }
 end:
-    //onClose();
+    onClose();
     destroyRenderContext(d->psurface);
-    //d->sem.release();
+    d->sem.release();
 }
 
 void RenderLoop::resize(int w, int h)
@@ -162,6 +160,8 @@ void RenderLoop::show()
     while (!d->sem.tryAcquire(1, 10)) {
         d->psurface->processEvents();
     }
+    if (d->render_thread.joinable())
+        d->render_thread.join();
 }
 
 void RenderLoop::waitForNext()
