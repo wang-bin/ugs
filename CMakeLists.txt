@@ -116,6 +116,10 @@ set(SRC
 if(WIN32)
   list(APPEND SRC Win32Surface.cpp)
 endif()
+if(ANDROID)
+  list(APPEND SRC AndroidSurface.cpp base/jmi/jmi.cpp)
+  list(APPEND EXTRA_LIBS android log)
+endif()
 if(IOS)
   list(APPEND SRC UIKitSurface.mm)
   list(APPEND EXTRA_DYLIBS "-framework UIKit" "-framework Foundation") # Foundation: objc, CoreGraphics: CGRectNull

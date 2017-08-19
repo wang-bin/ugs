@@ -4,3 +4,6 @@
 [submodule "cmake/ios"]
 	path = cmake/ios
 	url = https://github.com/wang-bin/ios.cmake.git
+[submodule "base/jmi"]
+	path = base/jmi
+	url = https://github.com/wang-bin/JMI.git

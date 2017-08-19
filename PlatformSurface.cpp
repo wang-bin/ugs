@@ -6,6 +6,7 @@
 #include <chrono>
 
 UGSURFACE_NS_BEGIN
+extern PlatformSurface* create_android_surface();
 extern PlatformSurface* create_uikit_surface();
 extern PlatformSurface* create_wfc();
 extern PlatformSurface* create_rpi_surface();
@@ -16,7 +17,10 @@ typedef PlatformSurface* (*surface_creator)();
 
 PlatformSurface* PlatformSurface::create(Type type)
 {
-    #ifdef HAVE_WAYLAND
+#ifdef __ANDROID__
+    return create_android_surface();
+#endif
+#ifdef HAVE_WAYLAND
     if (type == Type::Wayland)
         return create_wayland_surface();
 #endif
