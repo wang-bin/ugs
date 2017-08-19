@@ -41,4 +41,13 @@
 # define VC_NO_WARN(number)
 #endif
 VC_NO_WARN(4251) /* class 'type' needs to have dll-interface to be used by clients of class 'type2' */
+
+/*!
+ * \brief javaVM
+ * Set/Get current java vm
+ * \param vm null to get current vm
+ * \return current vm
+ */
+UGSURFACE_API void* javaVM(void* vm = nullptr);
+
 #endif //UGSURFACE__EXPORT_H
