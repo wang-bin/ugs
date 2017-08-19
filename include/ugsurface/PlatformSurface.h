@@ -3,10 +3,19 @@
  */
 #pragma once
 #include <limits>
-#include "ugsurface/export.h"
+#include "export.h"
 #include <functional>
 
 UGSURFACE_NS_BEGIN
+
+/*!
+ * \brief javaVM
+ * Set/Get current java vm
+ * \param vm null to get current vm
+ * \return current vm
+ */
+UGSURFACE_API void* javaVM(void* vm = nullptr);
+
 class UGSURFACE_API PlatformSurface {
 public:
     class Event {
