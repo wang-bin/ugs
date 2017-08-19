@@ -12,7 +12,7 @@ class UGSURFACE_API PlatformSurface {
 public:
     class Event {
     public:
-        enum Type {
+        enum Type : int8_t {
             Close,
             Resize,
         };
@@ -41,6 +41,12 @@ public:
     void setEventCallback(std::function<void()> cb);
     void resetNativeHandle(void* h);
     void* nativeHandle() const;
+    /*!
+      \brief nativeHandleForGL
+      used to create GL context. It can be different with nativeHandle, for example android nativeHandle() is a Surface ptr, while nativeHandleForGL() is ANativeWindow.
+      TODO: HDC for WGL, Visual for GLX?
+     */
+    virtual void* nativeHandleForGL() const { return nativeHandle();}
     virtual Type type() const {return Type::Default;}
     virtual void* nativeResource() const {return nullptr;} // extra resource required by gfx context, e.g. wayland and x11 display
     virtual void resize(int w, int h);
