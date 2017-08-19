@@ -20,6 +20,8 @@ public:
     // must call updateNativeSurface(nullptr) before dtor if show() is not required, e.g. android
     // TODO: addNativeWindow(...)
     void updateNativeSurface(void* handle); // recreate surface if native surface handle changes. otherwise check geometry change
+    bool start(); // start render loop if surface is ready
+    bool isRunning() const;
     void update(); // schedule onDraw
     /*!
      * \brief setFrameRate

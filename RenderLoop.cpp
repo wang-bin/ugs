@@ -26,6 +26,7 @@ public:
     }
 
     bool use_thread = true;
+    bool running = false;
     bool dirty_native_surface = false; // if current native surface is reset by updateNativeSurface(), a new render loop will start
     void* native_surface = nullptr; // just record previous surface handle
     PlatformSurface* psurface = nullptr; // always create one to unify code
@@ -48,13 +49,34 @@ RenderLoop::RenderLoop(int x, int y, int w, int h)
     if (!d->psurface->nativeHandle() || !d->use_thread)
         return;
     d->dirty_native_surface = true;
-    // FIXME: call on exit
-    updateNativeSurface(d->psurface->nativeHandle());
 }
 
 RenderLoop::~RenderLoop()
 {
     delete d;
+}
+
+bool RenderLoop::start()
+{
+    // TODO: start even if nativeHandle is null
+    if (!d->psurface->nativeHandle())
+        return false;
+    if (d->running)
+        return true;
+    d->running = true;
+    if (d->use_thread) { // check joinable?
+        d->render_thread = std::thread([this]{
+            run();
+        });
+    } else {
+        run();
+    }
+    return true;
+}
+
+bool RenderLoop::isRunning() const
+{
+    return d->running;
 }
 
 void RenderLoop::update()
@@ -75,18 +97,11 @@ void RenderLoop::updateNativeSurface(void *handle)
         d->psurface->close();
     if (d->render_thread.joinable())
         d->render_thread.join();
-
+    d->running = false;
     // exit old thread before resetting native handle to ensure new events are posted to new thread
     d->psurface->resetNativeHandle(handle);
     d->dirty_native_surface = true;
     d->native_surface = handle;
-
-    const bool start_thread = handle && d->use_thread;
-    if (start_thread) { // check joinable?
-        d->render_thread = std::thread([this]{
-            run();
-        });
-    }
 }
 
 void RenderLoop::run()
