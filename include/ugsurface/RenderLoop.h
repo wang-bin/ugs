@@ -34,7 +34,7 @@ public:
 protected:
     virtual bool createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface) = 0;
-    virtual bool activeRenderContext(PlatformSurface* surface) = 0;
+    virtual bool activateRenderContext(PlatformSurface* surface) = 0;
     virtual bool submitRenderContext(PlatformSurface* surface) = 0;
     /// the following functions are called on rendering thread
     virtual void onClose() {} // TODO: onClose(function), param: PlatformSurface ...

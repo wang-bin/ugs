@@ -103,7 +103,7 @@ void RenderLoop::run()
             }
         }
         waitForNext();
-        activeRenderContext(d->psurface);
+        activateRenderContext(d->psurface);
 
         PlatformSurface::Event e{};
         // TODO: dispatch to a certain surface
