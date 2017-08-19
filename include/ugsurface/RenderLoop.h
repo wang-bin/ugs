@@ -6,20 +6,20 @@
 
 UGSURFACE_NS_BEGIN
 class PlatformSurface;
-class UGSURFACE_API RenderLoop // TODO: move to core.renderloop
+class UGSURFACE_API RenderLoop
 {
 public:
     /*!
      * \brief RenderLoop
-     * Create a platform window and start rendering thread internally. Rendering context will be automatically created from platform window
-     * For some platforms like android, real window is created by app and platform window is just a dummy window,, x, y, w, h and title are unused.
+     * Create a platform surface and start rendering thread internally. Rendering context will be automatically created from platform surface
+     * For some platforms the real surface is created by app and platform surface can be a dummy surface, x, y, w, h are unused.
      * You must call updateNativeWindow to active rendering context for such platforms.
      */
     RenderLoop(int x = 0, int y = 0, int w = 0, int h = 0);
     virtual ~RenderLoop();
-    // must call updateNativeWindow(nullptr) before dtor if show() is not required, e.g. android
+    // must call updateNativeSurface(nullptr) before dtor if show() is not required, e.g. android
     // TODO: addNativeWindow(...)
-    void updateNativeWindow(void* handle); // recreate window if native window handle changes. otherwise check geometry change
+    void updateNativeSurface(void* handle); // recreate surface if native surface handle changes. otherwise check geometry change
     void update(); // schedule onDraw
     /*!
      * \brief setFrameRate

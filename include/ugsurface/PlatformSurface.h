@@ -27,15 +27,15 @@ public:
     };
 
     enum class Type : int8_t {
-        Default, // platform default window type if only 1 type is supported
+        Default, // platform default window/surface type if only 1 type is supported
         X11,
         Wayland,
         GBM,
     };
     /*!
-     * If OS and window system supports to create multiple kinds of window, Type must be specified to create the desired one.
+     * If OS and window system supports to create multiple kinds of window/surface, Type must be specified to create the desired one.
      */
-    static PlatformSurface* create(Type type = Type::Default); // TODO: param existing NativeWindow? for android, ios etc. if not null, create a wrapper. if null, create internal window
+    static PlatformSurface* create(Type type = Type::Default); // TODO: param existing NativeWindow? for android, ios etc. if not null, create a wrapper. if null, create internal window/surface
     virtual ~PlatformSurface();
     void setEventCallback(std::function<void()> cb);
     void resetNativeHandle(void* h);

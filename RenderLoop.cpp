@@ -18,7 +18,7 @@ class RenderLoop::Private
 {
 public:
     ~Private() {
-        //updateNativeWindow(nullptr); // ensure not joinable
+        //updateNativeSurface(nullptr); // ensure not joinable
         if (render_thread.joinable())
             std::cerr << "rendering thread should not be joinable" << std::endl << std::flush;
         assert(!render_thread.joinable() && "rendering thread should not be joinable");
@@ -26,7 +26,7 @@ public:
     }
 
     bool use_thread = true;
-    bool dirty_native_surface = false; // if current native surface is reset by updateNativeWindow(), a new render loop will start
+    bool dirty_native_surface = false; // if current native surface is reset by updateNativeSurface(), a new render loop will start
     void* native_surface = nullptr; // just record previous surface handle
     PlatformSurface* psurface = nullptr; // always create one to unify code
     std::condition_variable cv;
@@ -49,7 +49,7 @@ RenderLoop::RenderLoop(int x, int y, int w, int h)
         return;
     d->dirty_native_surface = true;
     // FIXME: call on exit
-    updateNativeWindow(d->psurface->nativeHandle());
+    updateNativeSurface(d->psurface->nativeHandle());
 }
 
 RenderLoop::~RenderLoop()
@@ -62,9 +62,9 @@ void RenderLoop::update()
     proceedToNext();
 }
 
-void RenderLoop::updateNativeWindow(void *handle)
+void RenderLoop::updateNativeSurface(void *handle)
 {
-    printf("%p->updateNativeWindow: %p=>%p\n", this, d->native_surface, handle);
+    printf("%p->updateNativeSurface: %p=>%p\n", this, d->native_surface, handle);
     if (d->native_surface == handle) {
         // TODO: resize
         return;
