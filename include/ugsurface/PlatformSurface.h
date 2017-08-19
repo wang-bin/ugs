@@ -8,7 +8,7 @@
 
 UGSURFACE_NS_BEGIN
 
-class PlatformSurface {
+class UGSURFACE_API PlatformSurface {
 public:
     class Event {
     public:
