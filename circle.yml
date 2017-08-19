@@ -1,0 +1,20 @@
+dependencies:
+  pre:
+    - uname -a
+    - cat /etc/issue
+    - tail -n 27 /proc/cpuinfo
+    - sudo apt-get install -y libx11-dev libwayland-dev ninja-build
+  override:
+compile:
+  override:
+    - cmake -GNinja -H$PWD -B$PWD/build/host -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$PWD/ugsurface-linux64
+    - cmake --build build/host -- -v
+    - ls -lh build/host
+    - cmake -P build/host/cmake_install.cmake
+    - tar Jcvf $CIRCLE_ARTIFACTS/ugsurface-linux64.tar.xz ugsurface-linux64
+test:
+  override:
+    - readelf -d ./build/host/libugsurface.so
+checkout:
+  post:
+    - git submodule update --init
