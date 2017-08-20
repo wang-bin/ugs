@@ -150,10 +150,21 @@ if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND)
   list(APPEND EXTRA_INCLUDE ${WAYLAND_CLIENT_INCLUDE_DIR} ${WAYLAND_EGL_INCLUDE_DIR})
   list(APPEND EXTRA_LIBS ${WAYLAND_CLIENT_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
 endif()
+
+find_package(PkgConfig)
+pkg_check_modules(PKG_GBM gbm)
+pkg_check_modules(PKG_LIBDRM libdrm)
+if(PKG_GBM_FOUND AND PKG_LIBDRM_FOUND)
+  set(HAVE_GBM 1)
+  set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_GBM=1")
+  list(APPEND SRC GBMSurface.cpp)
+  set_source_files_properties(GBMSurface.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_GBM=1 ${PKG_GBM_CFLAGS} ${PKG_LIBDRM_CFLAGS}")
+  list(APPEND EXTRA_LIBS ${PKG_GBM_LIBRARIES} ${PKG_LIBDRM_LIBRARIES})
+endif()
+
 if(EXTRA_CFLAGS)
   set_source_files_properties(PlatformSurface.cpp PROPERTIES COMPILE_FLAGS ${EXTRA_CFLAGS})
 endif()
-
 
 add_library(${TARGET_NAME}-shared SHARED ${SRC})
 add_library(${TARGET_NAME}-static STATIC ${SRC})

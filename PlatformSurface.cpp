@@ -13,6 +13,7 @@ extern PlatformSurface* create_rpi_surface();
 extern PlatformSurface* create_x11_surface();
 extern PlatformSurface* create_win32_surface();
 extern PlatformSurface* create_wayland_surface();
+extern PlatformSurface* create_gbm_surface();
 typedef PlatformSurface* (*surface_creator)();
 
 PlatformSurface* PlatformSurface::create(Type type)
@@ -27,6 +28,10 @@ PlatformSurface* PlatformSurface::create(Type type)
 #ifdef HAVE_X11
     if (type == Type::X11)
         return create_x11_surface();
+#endif
+#ifdef HAVE_GBM
+    if (type == Type::GBM)
+        return create_gbm_surface();
 #endif
     // fallback to platform default surface
     for (auto create_win : std::initializer_list<surface_creator>{ // vs2013 does not support {}, it requires explicit std::initializer_list<surface_creator>{}
@@ -46,6 +51,9 @@ PlatformSurface* PlatformSurface::create(Type type)
 #endif
 #if (HAVE_WAYLAND+0)
         create_wayland_surface,
+#endif
+#if (HAVE_GBM+0)
+        create_gbm_surface,
 #endif
     }) { // TODO: how to avoid crash if create error?
         PlatformSurface* pw = create_win();
