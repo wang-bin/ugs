@@ -47,7 +47,7 @@ private:
     DISPMANX_DISPLAY_HANDLE_T display_ = 0;
 };
 
-PlatformSurface* create_rpi_window() { return new RPiSurface();}
+PlatformSurface* create_rpi_surface() { return new RPiSurface();}
 
 EGL_DISPMANX_WINDOW_T* RPiSurface::createFullscreenWindow(DISPMANX_DISPLAY_HANDLE_T disp)
 {
