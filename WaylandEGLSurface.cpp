@@ -8,6 +8,8 @@ class WaylandEGLSurface final : public WaylandSurface
 {
 public:
     WaylandEGLSurface() : WaylandSurface() {
+        if (!display_)
+            return;
         wl_egl_window* eglwin = wl_egl_window_create(surface_, w_, h_);
         resetNativeHandle(reinterpret_cast<void*>(eglwin));
     }

@@ -4,11 +4,16 @@
 #include "WaylandSurface.h"
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 UGSURFACE_NS_BEGIN
 WaylandSurface::WaylandSurface() : PlatformSurface()
 {
     display_ = wl_display_connect(nullptr);
+    if (!display_) {
+        std::cerr << "failed to connect to wayland display" << std::endl;
+        return;
+    }
     wl_registry* reg = wl_display_get_registry(display_);
     const wl_registry_listener reg_listener = {&registry_add_object, &registry_remove_object};
     wl_registry_add_listener(reg, &reg_listener, this);
@@ -40,6 +45,7 @@ void WaylandSurface::processEvents()
 
 void WaylandSurface::registry_add_object(void *data, struct wl_registry *reg, uint32_t name, const char *interface, uint32_t version)
 {
+    printf("WaylandSurface::registry_add_object: %s\n", interface);
     WaylandSurface* ww = static_cast<WaylandSurface*>(data);
     if (!strcmp(interface, "wl_compositor"))
         ww->compositor_ = static_cast<wl_compositor*>(wl_registry_bind(reg, name, &wl_compositor_interface, version));
