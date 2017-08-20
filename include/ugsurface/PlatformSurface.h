@@ -57,6 +57,7 @@ public:
     virtual void* nativeHandleForGL() const { return nativeHandle();}
     virtual Type type() const {return Type::Default;}
     virtual void* nativeResource() const {return nullptr;} // extra resource required by gfx context, e.g. wayland and x11 display
+    virtual void submit() {}
     virtual void resize(int w, int h);
     virtual void close();
     virtual void processEvents() {}

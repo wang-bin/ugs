@@ -131,14 +131,17 @@ void RenderLoop::run()
                 onResize(e.size.width, e.size.height);
 #if defined(__ANDROID__) || defined(ANDROID)
                 submitRenderContext(d->psurface);
-                    // workaround for android wrong display rect. also force iOS resize rbo because makeCurrent is not always called in current implementation
-                    // if (onDraw()) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
+                d->psurface->submit();
+                // workaround for android wrong display rect. also force iOS resize rbo because makeCurrent is not always called in current implementation
+                // if (onDraw()) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
 #endif
             }
         }
         // FIXME: check null for ios background?
-        if (onDraw())
+        if (onDraw()) {
             submitRenderContext(d->psurface);
+            d->psurface->submit();
+        }
     }
 end:
     onClose();
