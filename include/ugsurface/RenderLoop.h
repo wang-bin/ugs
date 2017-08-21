@@ -3,6 +3,7 @@
  */
 #pragma once
 #include "export.h"
+#include <functional>
 
 UGSURFACE_NS_BEGIN
 class PlatformSurface;
@@ -21,8 +22,9 @@ public:
     // TODO: addNativeWindow(...)
     void updateNativeSurface(void* handle); // recreate surface if native surface handle changes. otherwise check geometry change
     bool start(); // start render loop if surface is ready
+    void stop(); // destroy gfx contexts and surfaces, then stop render loop
     bool isRunning() const;
-    void update(); // schedule onDraw
+    void update(); // schedule onDraw for all surfaces
     /*!
      * \brief setFrameRate
      * \param fps
@@ -33,7 +35,15 @@ public:
     void setFrameRate(float fps = 0);
     void resize(int w, int h); // TODO: setGeometry. resize(PlatformSurface, ...)
     void show();
+
+    // takes the ownership. but surface ptr can be accessed before close. To remove surface, call surface->close()
+    std::weak_ptr<PlatformSurface> add(PlatformSurface* surface);
+    void onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
+    void onDraw(std::function<bool(PlatformSurface*)> cb);
+    void onClose(std::function<void(PlatformSurface*)> cb);
 protected:
+// *useSurfaceCb = [ctx] { this->current_ctx = ctx;} // ctx is created in createRenderContext()
+    virtual bool createRenderContext(PlatformSurface* surface, std::function<void()> *useSurfaceCb) { return createRenderContext(surface);}
     virtual bool createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface) = 0;
     virtual bool activateRenderContext(PlatformSurface* surface) = 0;
@@ -51,6 +61,8 @@ protected:
      */
     virtual bool onDraw() { return false;} // TODO: onDraw(function), param: PlatformSurface ...
 private:
+    // process surface events and do rendering. return input surface, or null if surface is no longer used, e.g. closed
+    PlatformSurface* process(PlatformSurface* surface);
     void run();
     // TODO: frame advance service abstraction(clock, vsync, user)
     void waitForNext();

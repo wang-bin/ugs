@@ -46,7 +46,7 @@ public:
      */
     static PlatformSurface* create(Type type = Type::Default); // TODO: param existing NativeWindow? for android, ios etc. if not null, create a wrapper. if null, create internal window/surface
     virtual ~PlatformSurface();
-    void setEventCallback(std::function<void()> cb);
+    void setEventCallback(std::function<void()> cb); // TODO: void(Event) as callback and remove event queue which can be implemented externally
     void resetNativeHandle(void* h);
     void* nativeHandle() const;
     /*!
