@@ -45,7 +45,7 @@ PlatformSurface* PlatformSurface::create(Type type)
         create_uikit_surface,
 # endif
 #endif
-// APPLE, Cygwin can support X11
+// APPLE, Cygwin can support X11. FIXME: create x11 in RenderLoop on macOS may is not desired when using cocoa view
 #if (HAVE_X11+0) // defined(__gnu_linux__) && !defined(ANDROID)
         create_x11_surface,
 #endif
@@ -91,6 +91,9 @@ void PlatformSurface::resetNativeHandle(void* handle)
     d->native_handle = handle;
     if (d->handle_cb)
         d->handle_cb(old);
+    Event e;
+    e.type = Event::NativeHandle;
+    pushEvent(e);
 }
 
 void PlatformSurface::setNativeHandleChangeCallback(std::function<void(void*)> cb)
@@ -146,11 +149,7 @@ bool PlatformSurface::popEvent(Event &e, int64_t timeout)
 void PlatformSurface::pushEvent(const Event &e)
 {
     d->events.push(e);
-    onEvent();
-}
-
-void PlatformSurface::onEvent()
-{
+    // TODO: user listeners
     if (d->cb)
         d->cb();
 }

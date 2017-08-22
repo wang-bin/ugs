@@ -4,6 +4,7 @@
 #pragma once
 #include "export.h"
 #include <functional>
+#include <memory>
 
 UGSURFACE_NS_BEGIN
 class PlatformSurface;
@@ -43,8 +44,7 @@ public:
     void onClose(std::function<void(PlatformSurface*)> cb);
 protected:
 // *useSurfaceCb = [ctx] { this->current_ctx = ctx;} // ctx is created in createRenderContext()
-    virtual bool createRenderContext(PlatformSurface* surface, std::function<void()> *useSurfaceCb) { return createRenderContext(surface);}
-    virtual bool createRenderContext(PlatformSurface* surface) = 0;
+    virtual bool createRenderContext(PlatformSurface* surface, std::function<void()> *useSurfaceCb = nullptr) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface) = 0;
     virtual bool activateRenderContext(PlatformSurface* surface) = 0;
     virtual bool submitRenderContext(PlatformSurface* surface) = 0;

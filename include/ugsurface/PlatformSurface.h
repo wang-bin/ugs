@@ -23,6 +23,7 @@ public:
         enum Type : int8_t {
             Close,
             Resize,
+            NativeHandle,
         };
         Type type;
 
@@ -75,8 +76,6 @@ protected:
 
     PlatformSurface();
 private:
-    void onEvent();
-
     class Private;
     Private* d;
 };

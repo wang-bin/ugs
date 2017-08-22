@@ -22,8 +22,10 @@ class RenderLoop::Private
 public:
     ~Private() {
         //updateNativeSurface(nullptr); // ensure not joinable
-        if (render_thread.joinable()) // already not joinable by updateNativeSurface(nullptr) or show() return
+        if (render_thread.joinable()) {// already not joinable by updateNativeSurface(nullptr) or show() return
             std::cerr << "rendering thread should not be joinable" << std::endl << std::flush;
+            render_thread.join();
+        }
         assert(!render_thread.joinable() && "rendering thread should not be joinable");
         delete psurface;
     }
@@ -32,6 +34,7 @@ public:
     }
 
     void run() {
+        running = true;
         printf("%p start RenderLoop\n", this);
         while (true) {
             function<void()> task;
@@ -42,9 +45,10 @@ public:
                 break;
         }
         sem.release();
+        running = false;
     }
 
-    bool task_model = false;
+    bool task_model = true;
     bool use_thread = true;
     bool stop_requested = false;
     bool running = false;
@@ -70,6 +74,8 @@ public:
 RenderLoop::RenderLoop(int x, int y, int w, int h)
     : d(new Private())
 {
+    if (d->task_model)
+        return;
     d->psurface = PlatformSurface::create(); // create surface in ui thread, not rendering thread
     assert(d->psurface);
     d->psurface->setEventCallback([this]{
@@ -89,6 +95,16 @@ RenderLoop::~RenderLoop()
 
 bool RenderLoop::start()
 {
+    if (d->task_model) {
+        if (d->use_thread) { // check joinable?
+            d->render_thread = std::thread([this]{
+                d->run();
+            });
+        } else {
+            d->run();
+        }
+        return true;
+    }
     // TODO: start even if nativeHandle is null
     if (!d->psurface->nativeHandle())
         return false;
@@ -174,7 +190,7 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     shared_ptr<PlatformSurface> ss(surface);
     d->schedule([=]{
         function<void()> cb = nullptr;
-        if (!createRenderContext(ss.get(), &cb)) { // ss will be destroyed if not pushed to list
+        if (!createRenderContext(surface, &cb)) { // ss will be destroyed if not pushed to list
             printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
             return;
         }
@@ -197,15 +213,35 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
 PlatformSurface* RenderLoop::process(PlatformSurface* surface)
 {
     activateRenderContext(surface);
-
     PlatformSurface::Event e{};
     while (surface->popEvent(e, 0)) { // do no always try pop
-        if (e.type == PlatformSurface::Event::Close) {
+        if (e.type == PlatformSurface::Event::Close
+            && e.type == PlatformSurface::Event::NativeHandle) {
             std::cout << surface << "->PlatformSurface::Event::Close" << std::endl;
             if (d->close_cb)
                 d->close_cb(surface);
             destroyRenderContext(surface);
-            return nullptr;
+            if (e.type == PlatformSurface::Event::Close)
+                return nullptr;
+            function<void()> cb = nullptr;
+            if (!createRenderContext(surface, &cb)) { // ss will be destroyed if not pushed to list
+                printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
+                return surface;
+            }
+            surface->setEventCallback([=]{ // TODO: void(Event e)
+                d->schedule([=]{
+                    if (cb)
+                        cb();
+                    if (!process(surface)) {
+                        auto it = find_if(d->surfaces.begin(), d->surfaces.end(), [surface](Private::SurfaceProcessor* sp){
+                            return sp->surface.get() == surface;
+                        });
+                        d->surfaces.erase(it);
+                        delete *it;
+                    }
+                });
+            });
+            return surface;
         } else if (e.type == PlatformSurface::Event::Resize) {
             if (d->resize_cb)
                 d->resize_cb(surface, e.size.width, e.size.height);
@@ -227,6 +263,7 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface)
 
 void RenderLoop::run()
 {
+    d->running = true;
     //set_current_thread_name(UGSURFACE_STRINGIFY(UGSURFACE_NS) ".video.render");
     printf("%p start renderLoop thread\n", this);
     std::cout << "rendering thread: " << std::this_thread::get_id() << std::endl << std::flush;
@@ -269,6 +306,7 @@ end:
     onClose();
     destroyRenderContext(d->psurface);
     d->sem.release();
+    d->running = false;
 }
 
 void RenderLoop::resize(int w, int h)
@@ -283,7 +321,13 @@ void RenderLoop::show()
         return;
     }
     while (!d->sem.tryAcquire(1, 10)) {
-        d->psurface->processEvents();
+        if (d->task_model) {
+            for (auto sp : d->surfaces) {
+                sp->surface->processEvents();
+            }
+        } else {
+            d->psurface->processEvents();
+        }
     }
     if (d->render_thread.joinable())
         d->render_thread.join();
