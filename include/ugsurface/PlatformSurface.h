@@ -31,8 +31,13 @@ public:
             int width;
             int height;
         };
+        struct NativeHandleEvent {
+            void* before;
+            void* after;
+        };
         union {
             ResizeEvent size;
+            NativeHandleEvent handle;
         };
     };
 

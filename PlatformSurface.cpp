@@ -93,6 +93,8 @@ void PlatformSurface::resetNativeHandle(void* handle)
         d->handle_cb(old);
     Event e;
     e.type = Event::NativeHandle;
+    e.handle.before = old;
+    e.handle.after = handle;
     pushEvent(e);
 }
 

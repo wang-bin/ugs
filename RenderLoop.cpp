@@ -215,14 +215,28 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface)
     activateRenderContext(surface);
     PlatformSurface::Event e{};
     while (surface->popEvent(e, 0)) { // do no always try pop
-        if (e.type == PlatformSurface::Event::Close
-            && e.type == PlatformSurface::Event::NativeHandle) {
+        if (e.type == PlatformSurface::Event::Close) {
             std::cout << surface << "->PlatformSurface::Event::Close" << std::endl;
             if (d->close_cb)
                 d->close_cb(surface);
             destroyRenderContext(surface);
-            if (e.type == PlatformSurface::Event::Close)
-                return nullptr;
+            return nullptr;
+        } else if (e.type == PlatformSurface::Event::Resize) {
+            if (d->resize_cb)
+                d->resize_cb(surface, e.size.width, e.size.height);
+#if defined(__ANDROID__) || defined(ANDROID)
+            submitRenderContext(surface);
+            surface->submit();
+            // workaround for android wrong display rect. also force iOS resize rbo because makeCurrent is not always called in current implementation
+            // if (d->draw_cb && d->draw_cb(surface)) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
+#endif
+        } else if (e.type == PlatformSurface::Event::NativeHandle) {
+            std::cout << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
+            if (e.handle.before) {
+                if (d->close_cb)
+                    d->close_cb(surface);
+                destroyRenderContext(surface);
+            }
             function<void()> cb = nullptr;
             if (!createRenderContext(surface, &cb)) { // ss will be destroyed if not pushed to list
                 printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
@@ -242,15 +256,6 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface)
                 });
             });
             return surface;
-        } else if (e.type == PlatformSurface::Event::Resize) {
-            if (d->resize_cb)
-                d->resize_cb(surface, e.size.width, e.size.height);
-#if defined(__ANDROID__) || defined(ANDROID)
-            submitRenderContext(surface);
-            surface->submit();
-            // workaround for android wrong display rect. also force iOS resize rbo because makeCurrent is not always called in current implementation
-            // if (d->draw_cb && d->draw_cb(surface)) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
-#endif
         }
     }
     // FIXME: check null for ios background?
