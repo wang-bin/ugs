@@ -241,7 +241,6 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
                     }
                 });
             });
-            return surface; // FIXME
         }
     }
     if (!ctx) {
