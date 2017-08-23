@@ -18,8 +18,13 @@ typedef PlatformSurface* (*surface_creator)();
 
 PlatformSurface* PlatformSurface::create(Type type)
 {
+    // android, ios surface does not create native handle internally, so do not check nativeHandle()
 #ifdef __ANDROID__
     return create_android_surface();
+#elif defined(__APPLE__)
+# if !defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+    return create_uikit_surface();
+# endif
 #endif
 #ifdef HAVE_WAYLAND
     if (type == Type::Wayland)
@@ -40,10 +45,6 @@ PlatformSurface* PlatformSurface::create(Type type)
 #elif defined(OS_RPI)
         //create_wfc,
         create_rpi_surface,
-#elif defined(__APPLE__)
-# if !defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
-        create_uikit_surface,
-# endif
 #endif
 // APPLE, Cygwin can support X11. FIXME: create x11 in RenderLoop on macOS may is not desired when using cocoa view
 #if (HAVE_X11+0) // defined(__gnu_linux__) && !defined(ANDROID)
