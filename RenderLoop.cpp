@@ -188,24 +188,10 @@ void RenderLoop::updateNativeSurface(void *handle)
 weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
 {
     shared_ptr<PlatformSurface> ss(surface);
+    auto sp = new Private::SurfaceProcessor{ss, nullptr};
+    d->surfaces.push_back(sp);
     d->schedule([=]{
-        function<void()> cb = nullptr;
-        if (!createRenderContext(surface, &cb)) { // ss will be destroyed if not pushed to list
-            printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
-            return;
-        }
-        auto sp = new Private::SurfaceProcessor{ss, cb};
-        d->surfaces.push_back(sp);
-        surface->setEventCallback([=]{ // TODO: void(Event e)
-            d->schedule([=]{
-                if (cb)
-                    cb();
-                if (!process(ss.get())) {
-                    d->surfaces.erase(find(d->surfaces.begin(), d->surfaces.end(), sp));
-                    delete sp;
-                }
-            });
-        });
+        process(ss.get());
     });
     return ss;
 }
@@ -220,7 +206,7 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface)
             if (d->close_cb)
                 d->close_cb(surface);
             destroyRenderContext(surface);
-            return nullptr;
+            return nullptr; // FIXME
         } else if (e.type == PlatformSurface::Event::Resize) {
             if (d->resize_cb)
                 d->resize_cb(surface, e.size.width, e.size.height);
@@ -232,30 +218,32 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface)
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
             std::cout << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
-            if (e.handle.before) {
-                if (d->close_cb)
-                    d->close_cb(surface);
+            if (e.handle.before)
                 destroyRenderContext(surface);
-            }
             function<void()> cb = nullptr;
             if (!createRenderContext(surface, &cb)) { // ss will be destroyed if not pushed to list
                 printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
-                return surface;
+                return surface; // FIXME: continue?
             }
+            if (cb)
+                cb();
+            activateRenderContext(surface);
+            auto it = find_if(d->surfaces.begin(), d->surfaces.end(), [surface](Private::SurfaceProcessor* sp){
+                        return sp->surface.get() == surface;
+                    });
+            auto sp = *it;
+            sp->use = cb;
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
                     if (cb)
                         cb();
                     if (!process(surface)) {
-                        auto it = find_if(d->surfaces.begin(), d->surfaces.end(), [surface](Private::SurfaceProcessor* sp){
-                            return sp->surface.get() == surface;
-                        });
                         d->surfaces.erase(it);
                         delete *it;
                     }
                 });
             });
-            return surface;
+            return surface; // FIXME
         }
     }
     // FIXME: check null for ios background?
