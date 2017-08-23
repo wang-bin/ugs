@@ -85,5 +85,5 @@ private:
     CALayer *layer_ = nil;
 };
 
-PlatformSurface* create_ios_surface() { return new UIKitSurface();}
+PlatformSurface* create_uikit_surface() { return new UIKitSurface();}
 UGSURFACE_NS_END
