@@ -61,8 +61,9 @@ protected:
      */
     virtual bool onDraw() { return false;} // TODO: onDraw(function), param: PlatformSurface ...
 private:
+    class SurfaceProcessor;
     // process surface events and do rendering. return input surface, or null if surface is no longer used, e.g. closed
-    PlatformSurface* process(PlatformSurface* surface, void* ctx);
+    PlatformSurface* process(SurfaceProcessor* sp);
     void run();
     // TODO: frame advance service abstraction(clock, vsync, user)
     void waitForNext();

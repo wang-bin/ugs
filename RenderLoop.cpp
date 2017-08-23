@@ -12,11 +12,14 @@
 #include <thread>
 #include <iostream>
 
-/*!
- * TODO: support global rendering thread and event loop instead of per surface ones
- */
 UGSURFACE_NS_BEGIN
 using namespace std;
+
+class RenderLoop::SurfaceProcessor {
+public:
+    shared_ptr<PlatformSurface> surface;
+    void* ctx;
+};
 class RenderLoop::Private
 {
 public:
@@ -60,11 +63,7 @@ public:
     Semaphore sem;
     Semaphore render_sem;
 
-    typedef struct SurfaceProcessor {
-        shared_ptr<PlatformSurface> surface;
-        void* ctx;
-    } SurfaceProcessor;
-    list<SurfaceProcessor*> surfaces;
+    list<RenderLoop::SurfaceProcessor*> surfaces;
     std::function<void(PlatformSurface*,int,int)> resize_cb = nullptr;
     std::function<bool(PlatformSurface*)> draw_cb = nullptr;
     std::function<void(PlatformSurface*)> close_cb = nullptr;
@@ -143,7 +142,7 @@ void RenderLoop::update()
     }
     d->schedule([=]{
         for (auto sp : d->surfaces) {
-            process(sp->surface.get(), sp->ctx);
+            process(sp);
         }
     });
 }
@@ -186,17 +185,19 @@ void RenderLoop::updateNativeSurface(void *handle)
 weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
 {
     shared_ptr<PlatformSurface> ss(surface);
-    auto sp = new Private::SurfaceProcessor{ss, nullptr};
-        d->surfaces.push_back(sp);
+    auto sp = new SurfaceProcessor{ss, nullptr};
+    d->surfaces.push_back(sp);
     d->schedule([=]{
-        process(ss.get(), nullptr);
+        process(sp);
     });
     return ss;
 }
 
-PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
+PlatformSurface* RenderLoop::process(SurfaceProcessor *sp)
 {
-    activateRenderContext(surface);
+    PlatformSurface* surface = sp->surface.get();
+    void* ctx = sp->ctx;
+    activateRenderContext(surface, ctx);
     PlatformSurface::Event e{};
     while (surface->popEvent(e, 0)) { // do no always try pop
         if (e.type == PlatformSurface::Event::Close) {
@@ -217,10 +218,6 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
             std::cout << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
-            auto it = find_if(d->surfaces.begin(), d->surfaces.end(), [surface](Private::SurfaceProcessor* sp){
-                        return sp->surface.get() == surface;
-                    });
-            auto sp = *it;
             if (e.handle.before)
                 destroyRenderContext(surface, ctx);
             sp->ctx = nullptr;
@@ -235,7 +232,8 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
             activateRenderContext(surface, ctx);
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
-                    if (!process(surface, ctx)) {
+                    if (!process(sp)) {
+                        auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
                         d->surfaces.erase(it);
                         delete *it;
                     }
