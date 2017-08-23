@@ -44,10 +44,10 @@ public:
     void onClose(std::function<void(PlatformSurface*)> cb);
 protected:
 // *useSurfaceCb = [ctx] { this->current_ctx = ctx;} // ctx is created in createRenderContext()
-    virtual bool createRenderContext(PlatformSurface* surface, std::function<void()> *useSurfaceCb = nullptr) = 0;
-    virtual bool destroyRenderContext(PlatformSurface* surface) = 0;
-    virtual bool activateRenderContext(PlatformSurface* surface) = 0;
-    virtual bool submitRenderContext(PlatformSurface* surface) = 0;
+    virtual void* createRenderContext(PlatformSurface* surface) = 0;
+    virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx = nullptr) = 0;
+    virtual bool activateRenderContext(PlatformSurface* surface, void* ctx = nullptr) = 0;
+    virtual bool submitRenderContext(PlatformSurface* surface, void* ctx = nullptr) = 0;
     /// the following functions are called on rendering thread
     virtual void onClose() {} // TODO: onClose(function), param: PlatformSurface ...
     /*!
@@ -62,7 +62,7 @@ protected:
     virtual bool onDraw() { return false;} // TODO: onDraw(function), param: PlatformSurface ...
 private:
     // process surface events and do rendering. return input surface, or null if surface is no longer used, e.g. closed
-    PlatformSurface* process(PlatformSurface* surface);
+    PlatformSurface* process(PlatformSurface* surface, void* ctx);
     void run();
     // TODO: frame advance service abstraction(clock, vsync, user)
     void waitForNext();
