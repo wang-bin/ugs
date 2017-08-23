@@ -89,6 +89,7 @@ void PlatformSurface::resetNativeHandle(void* handle)
         return;
     auto old = d->native_handle;
     d->native_handle = handle;
+    // NativeHandleEvent must be posted after nativeHandleForGL is valid, before resize
     if (d->handle_cb)
         d->handle_cb(old);
     Event e;
@@ -96,6 +97,11 @@ void PlatformSurface::resetNativeHandle(void* handle)
     e.handle.before = old;
     e.handle.after = handle;
     pushEvent(e);
+    if (!handle)
+        return;
+    int w = 0, h = 0;
+    if (size(&w, &h))
+        PlatformSurface::resize(w, h);
 }
 
 void PlatformSurface::setNativeHandleChangeCallback(std::function<void(void*)> cb)
@@ -152,6 +158,7 @@ void PlatformSurface::pushEvent(const Event &e)
 {
     d->events.push(e);
     // TODO: user listeners
+    printf("%s@%d\n", __PRETTY_FUNCTION__, __LINE__);
     if (d->cb)
         d->cb();
 }

@@ -69,6 +69,18 @@ public:
     void* nativeResource() const override {
         return ensure_x11_display();
     }
+    bool size(int *w, int *h) const override {
+        Window win = reinterpret_cast<Window>(nativeHandle());
+        if (!win)
+            return false;
+        XWindowAttributes wa;
+        XGetWindowAttributes(display_, win, &wa);
+        if (w)
+            *w = wa.width;
+        if (h)
+            *h = wa.height;
+        return true;
+    }
     void resize(int w, int h) override {
         XResizeWindow(display_, (Window)nativeHandle(), w, h);
         //XFlush(display_);
@@ -95,16 +107,6 @@ X11Surface::X11Surface()
         std::cerr << "failed to get x11 display" << std::endl;
         return;
     }
-#if 1
-    setNativeHandleChangeCallback([this](void* oldwin){
-        Window w = reinterpret_cast<Window>(nativeHandle());
-        if (!w)
-            return;
-        XWindowAttributes wa;
-        XGetWindowAttributes(display_, w, &wa);
-        resize(wa.width, wa.height);
-    });
-#endif
 #if 1
     Window root = DefaultRootWindow(display_);
     XSetWindowAttributes swa;

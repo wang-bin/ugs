@@ -10,7 +10,6 @@
 #include "base/jmi/jmi.h"
 
 UGSURFACE_NS_BEGIN
-
 void* javaVM(void* vm)
 {
     return jmi::javaVM(static_cast<JavaVM*>(vm));
@@ -30,11 +29,6 @@ public:
             if (!s)
                 return;
             anw_ = ANativeWindow_fromSurface(jmi::getEnv(), s);
-            if (!anw_)
-                return;
-            int w = ANativeWindow_getWidth(anw_);
-            int h = ANativeWindow_getHeight(anw_);
-            PlatformSurface::resize(w, h); // post resize event
         });
     }
     ~AndroidSurface() {
@@ -45,6 +39,15 @@ public:
 
     void* nativeHandleForGL() const override {
         return anw_;
+    }
+    bool size(int* w, int *h) const override {
+        if (!anw_)
+            return false;
+        if (w)
+            *w = ANativeWindow_getWidth(anw_);
+        if (h)
+            *h = ANativeWindow_getHeight(anw_);
+        return true;
     }
     void resize(int w, int h) override {
         if (!anw_)

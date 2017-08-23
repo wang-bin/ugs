@@ -60,7 +60,6 @@ public:
             // observe view.frame or layer.bounds
             // http://stackoverflow.com/questions/4874288/use-key-value-observing-to-get-a-kvo-callback-on-a-uiviews-frame?noredirect=1&lq=1
             [layer_ addObserver:observer_ forKeyPath:@"bounds" options:NSKeyValueObservingOptionOld context:nil];
-            resize(layer_.bounds.size.width, layer_.bounds.size.height); // post resize event
         });
         observer_ = [PropertyObserver alloc];
         [observer_ observeGeometryChange:[this](float w, float h){ resize(w, h);}];
@@ -71,6 +70,15 @@ public:
         if (observer_)
             [observer_ release];
 #endif
+    }
+    bool size(int *w, int *h) const override {
+        if (!layer_)
+            return false;
+        if (w)
+            *w = layer_.bounds.size.width;
+        if (h)
+            *h = layer_.bounds.size.height;
+        return true;
     }
 private:
     PropertyObserver *observer_ = nil;
