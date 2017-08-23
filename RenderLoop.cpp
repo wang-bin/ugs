@@ -206,6 +206,7 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
             destroyRenderContext(surface, ctx);
             return nullptr; // FIXME
         } else if (e.type == PlatformSurface::Event::Resize) {
+            std::cout << "PlatformSurface::Event::Resize" << std::endl;
             if (d->resize_cb)
                 d->resize_cb(surface, e.size.width, e.size.height);
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -216,8 +217,13 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
             std::cout << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
+            auto it = find_if(d->surfaces.begin(), d->surfaces.end(), [surface](Private::SurfaceProcessor* sp){
+                        return sp->surface.get() == surface;
+                    });
+            auto sp = *it;
             if (e.handle.before)
                 destroyRenderContext(surface, ctx);
+            sp->ctx = nullptr;
             if (!e.handle.after)
                 return surface;
             ctx = createRenderContext(surface);
@@ -225,12 +231,8 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
                 printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
                 return surface; // FIXME
             }
-            activateRenderContext(surface, ctx);
-            auto it = find_if(d->surfaces.begin(), d->surfaces.end(), [surface](Private::SurfaceProcessor* sp){
-                        return sp->surface.get() == surface;
-                    });
-            auto sp = *it;
             sp->ctx = ctx;
+            activateRenderContext(surface, ctx);
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
                     if (!process(surface, ctx)) {
@@ -241,6 +243,10 @@ PlatformSurface* RenderLoop::process(PlatformSurface* surface, void* ctx)
             });
             return surface; // FIXME
         }
+    }
+    if (!ctx) {
+        std::cout << "no gl context. skip rendering..." << std::endl;
+        return surface;
     }
     // FIXME: check null for ios background?
     if (d->draw_cb && d->draw_cb(surface)) { // not onDraw(surface) is ok, because context is current
