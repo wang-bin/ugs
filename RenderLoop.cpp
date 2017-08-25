@@ -23,12 +23,7 @@ class RenderLoop::Private
 {
 public:
     ~Private() {
-        //updateNativeSurface(nullptr); // ensure not joinable
-        if (render_thread.joinable()) {// already not joinable by updateNativeSurface(nullptr) or show() return
-            std::cerr << "rendering thread should not be joinable" << std::endl << std::flush;
-            render_thread.join();
-        }
-        assert(!render_thread.joinable() && "rendering thread should not be joinable");
+        assert(!render_thread.joinable() && "rendering thread can not be joinable in dtor. MUST call stop() & waitForStopped() first");
     }
     void schedule(std::function<void()> task) {
         tasks.push(std::move(task));
@@ -69,6 +64,7 @@ RenderLoop::RenderLoop()
 
 RenderLoop::~RenderLoop()
 {
+    // can not stop and waitForStopped() in dtor to avoid calling virtual functions. user MUST manually cal them
     delete d;
 }
 
@@ -94,6 +90,25 @@ void RenderLoop::stop()
     for (auto sp : d->surfaces) {
         sp->surface->close();
     }
+}
+
+void RenderLoop::waitForStopped()
+{
+    if (!d->use_thread) {
+        d->run();
+        return;
+    }
+    while (d->running) {
+        for (auto sp : d->surfaces) {
+            sp->surface->processEvents();
+        }
+        unique_lock<mutex> lock(d->mtx);
+        if (!d->running)
+            break;
+        d->cv.wait_for(lock, chrono::milliseconds(10));
+    }
+    if (d->render_thread.joinable())
+        d->render_thread.join();
 }
 
 bool RenderLoop::isRunning() const
@@ -191,33 +206,14 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         }
     }
     if (!ctx) {
-        std::cout << "no gl context. skip rendering..." << std::endl;
+        std::cout << "no gfx context. skip rendering..." << std::endl;
         return surface;
     }
     // FIXME: check null for ios background?
-    if (d->draw_cb && d->draw_cb(surface)) { // not onDraw(surface) is ok, because context is current
+    if (d->draw_cb && d->draw_cb(surface)) { // not onDraw(surface) with surface is ok, because context is current
         submitRenderContext(surface, ctx);
         surface->submit();
     }
     return surface;
-}
-
-void RenderLoop::waitForStopped()
-{
-    if (!d->use_thread) {
-        d->run();
-        return;
-    }
-    while (d->running) {
-        for (auto sp : d->surfaces) {
-            sp->surface->processEvents();
-        }
-        unique_lock<mutex> lock(d->mtx);
-        if (!d->running)
-            break;
-        d->cv.wait_for(lock, chrono::milliseconds(10));
-    }
-    if (d->render_thread.joinable())
-        d->render_thread.join();
 }
 UGSURFACE_NS_END

@@ -11,16 +11,13 @@ class PlatformSurface;
 class UGSURFACE_API RenderLoop
 {
 public:
-    /*!
-     * \brief RenderLoop
-     * Create a platform surface and start rendering thread internally. Rendering context will be automatically created from platform surface
-     * For some platforms the real surface is created by app and platform surface can be a dummy surface, x, y, w, h are unused.
-     * You must call updateNativeWindow to active rendering context for such platforms.
-     */
     RenderLoop();
     virtual ~RenderLoop();
     bool start(); // start render loop if surface is ready
-    void stop(); // destroy gfx contexts and surfaces, then stop render loop
+    // close all surfaces, invoke onClose() callbacks, destroy gfx contexts and surfaces, then exit render loop
+    void stop();
+    /// MUST call stop() && waitForStopped() manually before destroying RenderLoop
+    void waitForStopped();
     bool isRunning() const;
     void update(); // schedule onDraw for all surfaces
     /*!
@@ -31,16 +28,14 @@ public:
      * +: auto update at fps
      */
     void setFrameRate(float fps = 0);
-    void waitForStopped();
 
     // takes the ownership. but surface ptr can be accessed before close. To remove surface, call surface->close()
     std::weak_ptr<PlatformSurface> add(PlatformSurface* surface);
-    /// the following functions are called on rendering thread
+    /// the following functions are called in rendering thread
     void onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
     void onDraw(std::function<bool(PlatformSurface*)> cb);
-    void onClose(std::function<void(PlatformSurface*)> cb);
+    void onClose(std::function<void(PlatformSurface*)> cb); // destroy gfx resources in the callback
 protected:
-// *useSurfaceCb = [ctx] { this->current_ctx = ctx;} // ctx is created in createRenderContext()
     virtual void* createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx) = 0;
     virtual bool activateRenderContext(PlatformSurface* surface, void* ctx) = 0;
@@ -53,5 +48,4 @@ private:
     class Private;
     Private* d;
 };
-
 UGSURFACE_NS_END
