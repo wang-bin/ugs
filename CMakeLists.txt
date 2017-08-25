@@ -111,7 +111,6 @@ set(SDK_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(SRC
     PlatformSurface.cpp
     RenderLoop.cpp
-    base/Semaphore.cpp
     )
 if(WIN32)
   list(APPEND SRC Win32Surface.cpp)
