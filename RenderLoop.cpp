@@ -131,7 +131,12 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     auto sp = new SurfaceContext{ss, nullptr};
     d->surfaces.push_back(sp);
     d->schedule([=]{
-        process(sp);
+        if (!process(sp)) { // create=>resize=>close event in 1 process()
+            cout << "deleting surface scheduled by surface add callback..." << endl;
+            auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
+            d->surfaces.erase(it);
+            delete *it;
+        }
     });
     return ss;
 }
@@ -176,6 +181,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
                     if (!process(sp)) {
+                        cout << "deleting surface scheduled by event callback..." << endl;
                         auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
                         d->surfaces.erase(it);
                         delete *it;
