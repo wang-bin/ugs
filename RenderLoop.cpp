@@ -47,7 +47,6 @@ public:
     bool stop_requested = false;
     bool running = false;
     mutex mtx;
-    condition_variable cv;
     thread render_thread;
 
     list<RenderLoop::SurfaceContext*> surfaces;
@@ -76,8 +75,6 @@ bool RenderLoop::start()
     if (d->use_thread) { // check joinable?
         d->render_thread = std::thread([this]{
             d->run();
-            //notify_all_at_thread_exit(d->cv, unique_lock<mutex>(d->mtx)); // not supported by gcc4.9
-            d->cv.notify_all();
         });
     }
     return true;
@@ -100,13 +97,14 @@ void RenderLoop::waitForStopped()
         return;
     }
     while (d->running) {
-        for (auto sp : d->surfaces) {
-            sp->surface->processEvents();
+        {
+            unique_lock<mutex> lock(d->mtx);
+            // surfaces.erase() on close
+            for (auto sp : d->surfaces) {
+                sp->surface->processEvents();
+            }
         }
-        unique_lock<mutex> lock(d->mtx);
-        if (!d->running)
-            break;
-        d->cv.wait_for(lock, chrono::milliseconds(10));
+        this_thread::sleep_for(chrono::milliseconds(10));
     }
     if (d->render_thread.joinable())
         d->render_thread.join();
@@ -169,6 +167,11 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             if (d->close_cb)
                 d->close_cb(surface);
             destroyRenderContext(surface, ctx);
+            auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
+            unique_lock<mutex> lock(d->mtx);
+            cout << "removing closed surface..." << endl;
+            d->surfaces.erase(it);
+            delete sp;
             return nullptr; // FIXME
         } else if (e.type == PlatformSurface::Event::Resize) {
             std::cout << "PlatformSurface::Event::Resize" << std::endl;
@@ -197,10 +200,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
                     if (!process(sp)) {
-                        cout << "deleting surface scheduled by event callback..." << endl;
-                        auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
-                        d->surfaces.erase(it);
-                        delete *it;
+                        cout << "surface removed by event callback..." << endl;
                     }
                 });
             });
