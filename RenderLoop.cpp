@@ -76,7 +76,8 @@ bool RenderLoop::start()
     if (d->use_thread) { // check joinable?
         d->render_thread = std::thread([this]{
             d->run();
-            notify_all_at_thread_exit(d->cv, unique_lock<mutex>(d->mtx));
+            //notify_all_at_thread_exit(d->cv, unique_lock<mutex>(d->mtx)); // not supported by gcc4.9
+            d->cv.notify_all();
         });
     }
     return true;
