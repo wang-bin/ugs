@@ -74,7 +74,6 @@ public:
      */
     bool popEvent(Event& e, int64_t timeout = (std::numeric_limits<int64_t>::max)());
 protected:
-    void pushEvent(const Event& e);
     // call in your ctor if want to observe the changes. the callback is called resetNativeHandle() parameter is a different handle.
     // can not use virtual method in resetNativeHandle() because it may be called in ctor
     // NOTE: it's recommended to call resize(w, h) in the callback
@@ -82,6 +81,7 @@ protected:
 
     PlatformSurface();
 private:
+    void pushEvent(const Event& e);
     class Private;
     Private* d;
 };

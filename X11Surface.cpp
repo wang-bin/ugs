@@ -54,7 +54,7 @@ void* ensure_x11_display() {
     return d;
 }
 
-class X11Surface final : public PlatformSurface
+class X11Surface final : public PlatformSurface // TODO: XlibSurface
 {
 public:
     X11Surface();
@@ -146,18 +146,12 @@ void X11Surface::processEvents() {
                 return;
             w_ = xev.xconfigure.width;
             h_ = xev.xconfigure.height;
-            Event e;
-            e.type = Event::Resize;
-            e.size.width = w_;
-            e.size.height = h_;
-            pushEvent(e);
+            PlatformSurface::resize(w_, h_);
         } else if (xev.type == DestroyNotify) {
 
         } else if (xev.type == ClientMessage) {
             if (xev.xclient.message_type == WM_PROTOCOLS && static_cast<Atom>(xev.xclient.data.l[0]) == WM_DELETE_WINDOW) {
-                Event e;
-                e.type = Event::Close;
-                pushEvent(e);
+                PlatformSurface::close();
             }
         }
     }    
