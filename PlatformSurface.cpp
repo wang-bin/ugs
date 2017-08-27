@@ -68,6 +68,7 @@ PlatformSurface* PlatformSurface::create(Type type)
 class PlatformSurface::Private
 {
 public:
+    bool closed = false;
     void* native_handle = nullptr;
     std::function<void(void*)> handle_cb = nullptr;
     std::function<void()> cb = nullptr;
@@ -133,6 +134,7 @@ void PlatformSurface::close()
     Event e;
     e.type = Event::Close;
     pushEvent(e);
+    d->closed = true;
 }
 
 bool PlatformSurface::popEvent(Event &e, int64_t timeout)
@@ -157,9 +159,10 @@ bool PlatformSurface::popEvent(Event &e, int64_t timeout)
 
 void PlatformSurface::pushEvent(const Event &e)
 {
+    if (d->closed) // no pendding events for closed surface
+        return;
     d->events.push(e);
     // TODO: user listeners
-    printf("%s@%d\n", __PRETTY_FUNCTION__, __LINE__);
     if (d->cb)
         d->cb();
 }
