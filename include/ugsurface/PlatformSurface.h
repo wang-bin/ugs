@@ -7,7 +7,6 @@
 #include <functional>
 
 UGSURFACE_NS_BEGIN
-
 /*!
  * \brief javaVM
  * Set/Get current java vm
@@ -50,6 +49,7 @@ public:
     /*!
      * If OS and window system supports to create multiple kinds of window/surface, Type must be specified to create the desired one.
      */
+    // TODO: from an existing native handle, and reset later
     static PlatformSurface* create(Type type = Type::Default); // TODO: param existing NativeWindow? for android, ios etc. if not null, create a wrapper. if null, create internal window/surface
     virtual ~PlatformSurface();
     void setEventCallback(std::function<void()> cb); // TODO: void(Event) as callback and remove event queue which can be implemented externally
@@ -68,6 +68,8 @@ public:
     virtual void resize(int w, int h);
     virtual void close();
     virtual void processEvents() {}
+    virtual bool acquire() { return true;}
+    virtual void release() {}
     /*!
      * \brief popEvent
      * \return false if no event

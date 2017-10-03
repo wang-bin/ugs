@@ -159,6 +159,8 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
 {
     PlatformSurface* surface = sp->surface.get();
     void* ctx = sp->ctx;
+    if (!surface->acquire())
+        return surface;
     activateRenderContext(surface, ctx);
     PlatformSurface::Event e{};
     while (surface->popEvent(e, 0)) { // do no always try pop
@@ -167,6 +169,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             if (d->close_cb)
                 d->close_cb(surface);
             destroyRenderContext(surface, ctx);
+            surface->release();
             auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             unique_lock<mutex> lock(d->mtx);
             cout << "removing closed surface..." << endl;
@@ -188,15 +191,15 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             if (e.handle.before)
                 destroyRenderContext(surface, ctx);
             sp->ctx = nullptr;
+            surface->release(); // assume createRenderContext() will not call any gl command, so surface->acquire() is not required.
             if (!e.handle.after)
                 return surface;
             ctx = createRenderContext(surface);
             if (!ctx) { // ss will be destroyed if not pushed to list
                 printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
-                return surface; // FIXME
+                return surface; // already release(). FIXME
             }
             sp->ctx = ctx;
-            activateRenderContext(surface, ctx);
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
                     if (!process(sp)) {
@@ -204,10 +207,14 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
                     }
                 });
             });
+            if (!surface->acquire())
+                return surface;
+            activateRenderContext(surface, ctx);
         }
     }
     if (!ctx) {
         std::cout << "no gfx context. skip rendering..." << std::endl;
+        surface->release();
         return surface;
     }
     // FIXME: check null for ios background?
@@ -215,6 +222,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         submitRenderContext(surface, ctx);
         surface->submit();
     }
+    surface->release();
     return surface;
 }
 UGSURFACE_NS_END
