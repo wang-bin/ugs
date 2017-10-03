@@ -2,25 +2,41 @@
  * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugsurface/PlatformSurface.h"
+#import <UIKit/UIApplication.h>
 #import <UIKit/UIView.h>
 #include <iostream>
 
+static const NSNotificationName kAppNotifications[] = {
+    UIApplicationWillEnterForegroundNotification,
+    UIApplicationDidBecomeActiveNotification,
+    UIApplicationWillResignActiveNotification,
+    UIApplicationDidEnterBackgroundNotification,
+    UIApplicationWillTerminateNotification
+};
+
 @interface PropertyObserver : NSObject
 - (void) observeGeometryChange:(std::function<void(float,float)>)cb; //(void(^)())
+- (void) observeAppStateChange:(std::function<void(bool)>)cb; //(void(^)())
 @end
 
 @implementation PropertyObserver {
-    std::function<void(float,float)> update_cb_;
+    std::function<void(float,float)> geo_cb_;
+    std::function<void(bool)> app_state_cb_;
 }
 
 - (void) observeGeometryChange:(std::function<void(float,float)>)cb
 {
-    update_cb_ = cb;
+    geo_cb_ = cb;
+}
+
+- (void) observeAppStateChange:(std::function<void(bool)>)cb
+{
+    app_state_cb_ = cb;
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-    if (!update_cb_)
+    if (!geo_cb_)
         return;
     if([keyPath isEqualToString:@"bounds"] || [keyPath isEqualToString:@"frame"]) {
         CGRect rect0, rect;
@@ -30,8 +46,20 @@
             rect = [[object valueForKeyPath:keyPath] CGRectValue];
         const NSString *msg = [NSString stringWithFormat:@"%@ geometry changes from %fx%f to %fx%f", object, rect0.size.width, rect0.size.height, rect.size.width, rect.size.height];
         std::cout << msg.UTF8String << std::endl;
-        update_cb_(rect.size.width, rect.size.height);
+        geo_cb_(rect.size.width, rect.size.height);
     }
+}
+
+- (void)appStateChanged:(NSNotification *)notification
+{
+    NSLog(@"notification %@: %d", [notification name], (int)[UIApplication sharedApplication].applicationState);
+    for (auto n : {UIApplicationWillResignActiveNotification, UIApplicationDidEnterBackgroundNotification, UIApplicationWillTerminateNotification}) {
+        if ([[notification name] isEqualToString:n]) {
+            app_state_cb_(false);
+            return;
+        }
+    }
+    app_state_cb_(true);
 }
 @end
 
@@ -63,6 +91,15 @@ public:
         });
         observer_ = [PropertyObserver alloc];
         [observer_ observeGeometryChange:[this](float w, float h){ resize(w, h);}];
+        [observer_ observeAppStateChange:[this](bool allowed){
+            mtx_.lock();
+            gfx_allowed_ = allowed;
+            mtx_.unlock();
+        }];
+
+        for (auto name : kAppNotifications) {
+            [[NSNotificationCenter defaultCenter] addObserver:observer_ selector:@selector(appStateChanged:) name:name object:nil];
+        }
     }
     ~UIKitSurface() {
         resetNativeHandle(nullptr);
@@ -70,6 +107,9 @@ public:
         if (observer_)
             [observer_ release];
 #endif
+        for (auto name : kAppNotifications) {
+            [[NSNotificationCenter defaultCenter] removeObserver:observer_ name:name object:nil];
+        }
     }
     bool size(int *w, int *h) const override {
         if (!layer_)
@@ -80,9 +120,22 @@ public:
             *h = layer_.bounds.size.height;
         return true;
     }
+
+    virtual bool acquire() override {
+        mtx_.lock();
+        if (!gfx_allowed_)
+            mtx_.unlock();
+        //printf("gfx_allowed_: %d\n", gfx_allowed_);
+        return gfx_allowed_;
+    }
+    virtual void release() override {
+        mtx_.unlock();
+    }
 private:
     PropertyObserver *observer_ = nil;
     CALayer *layer_ = nil;
+    bool gfx_allowed_ = true;
+    std::mutex mtx_;
 };
 
 PlatformSurface* create_uikit_surface() { return new UIKitSurface();}
