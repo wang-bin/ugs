@@ -40,17 +40,20 @@ WaylandSurface::~WaylandSurface()
 
 void WaylandSurface::processEvents()
 {
-   // wl_display_dispatch_pending(display_);
+    //wl_display_dispatch_pending(display_);
+    //wl_display_flush(display_);
 }
 
 void WaylandSurface::registry_add_object(void *data, struct wl_registry *reg, uint32_t name, const char *interface, uint32_t version)
 {
     printf("WaylandSurface::registry_add_object: %s\n", interface);
     WaylandSurface* ww = static_cast<WaylandSurface*>(data);
-    if (!strcmp(interface, "wl_compositor"))
+    if (!strcmp(interface, wl_compositor_interface.name)) {//"wl_compositor"
         ww->compositor_ = static_cast<wl_compositor*>(wl_registry_bind(reg, name, &wl_compositor_interface, version));
-    else if (!strcmp(interface, "wl_shell"))
+        ww->surface_ = wl_compositor_create_surface(ww->compositor_);
+    } else if (!strcmp(interface, wl_shell_interface.name)) {// "wl_shell"
         ww->shell_ = static_cast<wl_shell*>(wl_registry_bind(reg, name, &wl_shell_interface, version));
+    }
 }
 
 void WaylandSurface::registry_remove_object(void *data, struct wl_registry *reg, uint32_t name)
