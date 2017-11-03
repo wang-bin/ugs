@@ -136,9 +136,8 @@ if(X11_FOUND)
   if(APPLE)
     # already marked as weak in cpp, so -weak_library is not required.
     list(APPEND EXTRA_DYLIBS -flat_namespace -Wl,-undefined,dynamic_lookup ${X11_X11_LIB})
-  elseif(CYGWIN)
-    list(APPEND EXTRA_DYLIBS ${X11_X11_LIB})
   endif()
+  list(APPEND EXTRA_DYLIBS ${X11_X11_LIB})
 endif()
 
 find_package(Wayland COMPONENTS Client Egl)
