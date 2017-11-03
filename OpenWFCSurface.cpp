@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>/<binwang at pptv.com>
+ * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugsurface/PlatformSurface.h"
 #include <cassert>

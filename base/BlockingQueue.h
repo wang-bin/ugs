@@ -3,7 +3,7 @@
  * Original code is from QtAV project
  */
 #pragma once
-
+#include <cstdio>
 #include <algorithm>
 #include <functional>
 #include <mutex>

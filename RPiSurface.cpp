@@ -3,6 +3,8 @@
  */
 #include "ugsurface/PlatformSurface.h"
 #include <cassert>
+#include <cstdio>
+#include <algorithm>
 #include <bcm_host.h>
 #include <EGL/egl.h>
 
