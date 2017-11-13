@@ -4,6 +4,7 @@
 #include "ugsurface/PlatformSurface.h"
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <algorithm>
 #include <bcm_host.h>
 #include <EGL/egl.h>
@@ -25,6 +26,13 @@ class RPiSurface final : public PlatformSurface
 {
 public:
     RPiSurface(): PlatformSurface() {
+        // TODO: read /proc/modules
+        const char* env = std::getenv("RPI_DISPMANX");
+        if (env) {
+            int use_dispmanx = std::atoi(env);
+            if (use_dispmanx <= 0)
+                return;
+        }
         bcm_host_init(); // required to create egl context
         display_ = vc_dispmanx_display_open(getDisplayId());
         assert(display_);
@@ -34,6 +42,8 @@ public:
     }
 
     ~RPiSurface() {
+        if (!display_)
+            return;
         EGL_DISPMANX_WINDOW_T *win = static_cast<EGL_DISPMANX_WINDOW_T*>(nativeHandle());
         DISPMANX_UPDATE_HANDLE_T hUpdate = vc_dispmanx_update_start(0);
         vc_dispmanx_element_remove(hUpdate, win->element);
