@@ -2,9 +2,7 @@
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugsurface/PlatformSurface.h"
-#include <cassert>
 #include <cstdio>
-#include <cstdlib>
 #include <algorithm>
 #include <bcm_host.h>
 #include <EGL/egl.h>
@@ -26,16 +24,10 @@ class RPiSurface final : public PlatformSurface
 {
 public:
     RPiSurface(): PlatformSurface() {
-        // TODO: read /proc/modules
-        const char* env = std::getenv("RPI_DISPMANX");
-        if (env) {
-            int use_dispmanx = std::atoi(env);
-            if (use_dispmanx <= 0)
-                return;
-        }
         bcm_host_init(); // required to create egl context
-        display_ = vc_dispmanx_display_open(getDisplayId());
-        assert(display_);
+        display_ = vc_dispmanx_display_open(getDisplayId()); // vc4 returns null
+        if (!display_)
+            return;
         // Let the window be fullscreen to simplify geometry change logic.
         // If the background is transparent and OpenGL viewport is not fullscreen, the result looks like a normal window
         resetNativeHandle(createFullscreenWindow(display_)); // virtual onNativeHandleChanged()!!!
@@ -64,7 +56,9 @@ PlatformSurface* create_rpi_surface() { return new RPiSurface();}
 EGL_DISPMANX_WINDOW_T* RPiSurface::createFullscreenWindow(DISPMANX_DISPLAY_HANDLE_T disp)
 {
     int32_t w = 0, h = 0;
-    graphics_get_display_size(getDisplayId(), (uint32_t*)&w, (uint32_t*)&h);
+    int32_t ret = graphics_get_display_size(getDisplayId(), (uint32_t*)&w, (uint32_t*)&h);
+    if (ret < 0)
+        return nullptr;
     resize(w, h); // resize event
     printf("creating dispmanx fullscreen window %dx%d...\n", w, h);
     const VC_RECT_T dst = {0, 0, w, h};
