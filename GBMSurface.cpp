@@ -90,7 +90,7 @@ GBMSurface::GBMSurface() : PlatformSurface()
         return;
     }
     dev_ = gbm_create_device(drm_fd_);
-    surf_ = gbm_surface_create(dev_, mode_.hdisplay, mode_.vdisplay, GBM_BO_FORMAT_XRGB8888, GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
+    surf_ = gbm_surface_create(dev_, mode_.hdisplay, mode_.vdisplay, GBM_FORMAT_XRGB8888, GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
     resetNativeHandle(surf_);
 }
 
@@ -117,7 +117,7 @@ void GBMSurface::submit()
 	uint32_t handle = gbm_bo_get_handle(bo).u32;
 	uint32_t pitch = gbm_bo_get_stride(bo);
 	uint32_t fb = 0;
-	drmModeAddFB(drm_fd_, gbm_bo_get_width(bo), gbm_bo_get_height(bo), 24, 32, pitch, handle, &fb);
+	drmModeAddFB(drm_fd_, gbm_bo_get_width(bo), gbm_bo_get_height(bo), 32, 32, pitch, handle, &fb);
 	drmModeSetCrtc(drm_fd_, crtc_->crtc_id, fb, 0, 0, &connector_->connector_id, 1, &mode_);
 	if (bo_) {
 		drmModeRmFB(drm_fd_, fb_);
