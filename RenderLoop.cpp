@@ -217,7 +217,6 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         surface->release();
         return surface;
     }
-    // FIXME: check null for ios background?
     if (d->draw_cb && d->draw_cb(surface)) { // not onDraw(surface) with surface is ok, because context is current
         submitRenderContext(surface, ctx);
         surface->submit();
