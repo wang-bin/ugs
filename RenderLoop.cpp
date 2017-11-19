@@ -31,7 +31,7 @@ public:
 
     void run() {
         running = true;
-        printf("%p start RenderLoop\n", this);
+        std::clog << this << " start RenderLoop" << std::endl;
         while (true) {
             function<void()> task;
             tasks.pop(task);
@@ -74,6 +74,7 @@ bool RenderLoop::start()
     d->running = true;
     if (d->use_thread) { // check joinable?
         d->render_thread = std::thread([this]{
+            std::clog << "Rendering thread @" << std::this_thread::get_id() << std::endl;
             d->run();
         });
     }
@@ -146,7 +147,7 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     d->surfaces.push_back(sp);
     d->schedule([=]{
         if (!process(sp)) { // create=>resize=>close event in 1 process()
-            cout << "deleting surface scheduled by surface add callback..." << endl;
+            clog << "deleting surface scheduled by surface add callback..." << endl;
             auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             delete *it;
             d->surfaces.erase(it);
@@ -165,19 +166,19 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
     PlatformSurface::Event e{};
     while (surface->popEvent(e, 0)) { // do no always try pop
         if (e.type == PlatformSurface::Event::Close) {
-            std::cout << surface << "->PlatformSurface::Event::Close" << std::endl;
+            std::clog << surface << "->PlatformSurface::Event::Close" << std::endl;
             if (d->close_cb)
                 d->close_cb(surface);
             destroyRenderContext(surface, ctx);
             surface->release();
             auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             unique_lock<mutex> lock(d->mtx);
-            cout << "removing closed surface..." << endl;
+            clog << "removing closed surface..." << endl;
             d->surfaces.erase(it);
             delete sp;
             return nullptr; // FIXME
         } else if (e.type == PlatformSurface::Event::Resize) {
-            std::cout << "PlatformSurface::Event::Resize" << std::endl;
+            std::clog << "PlatformSurface::Event::Resize" << std::endl;
             if (d->resize_cb)
                 d->resize_cb(surface, e.size.width, e.size.height);
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -187,7 +188,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             // if (d->draw_cb && d->draw_cb(surface)) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
-            std::cout << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
+            std::clog << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
             if (e.handle.before)
                 destroyRenderContext(surface, ctx);
             sp->ctx = nullptr;
@@ -196,14 +197,14 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
                 return surface;
             ctx = createRenderContext(surface);
             if (!ctx) { // ss will be destroyed if not pushed to list
-                printf("Failed to create rendering context! platform surface handle: %p\n", surface->nativeHandle());
+                std::clog << "ERROR! Failed to create rendering context! platform surface handle: " << surface->nativeHandle() << std::endl;
                 return surface; // already release(). FIXME
             }
             sp->ctx = ctx;
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
                     if (!process(sp)) {
-                        cout << "surface removed by event callback..." << endl;
+                        clog << "surface removed by event callback..." << endl;
                     }
                 });
             });
@@ -213,7 +214,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         }
     }
     if (!ctx) {
-        std::cout << "no gfx context. skip rendering..." << std::endl;
+        std::clog << "no gfx context. skip rendering..." << std::endl;
         surface->release();
         return surface;
     }

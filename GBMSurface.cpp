@@ -46,7 +46,7 @@ int get_drm_fd()
     if (n)
         card = atoi(n);
     else
-        std::cout << "env var DRM_NUM is not set, assume it's 0" << std::endl;
+        std::clog << "env var DRM_NUM is not set, assume it's 0" << std::endl;
     return get_drm_fd(card); 
 }
 
@@ -67,26 +67,26 @@ GBMSurface::GBMSurface() : PlatformSurface()
 {
     drm_fd_ = get_drm_fd();
     if (drm_fd_ < 0) {
-        std::cerr << "failed to open drm card" << std::endl;
+        std::clog << "failed to open drm card" << std::endl;
         return;
     }
     drmModeRes *res = drmModeGetResources(drm_fd_);
     connector_ = get_connector(drm_fd_, res);
     drmModeFreeResources(res);
     if (!connector_) {
-        std::cerr << "failed to get connector" << std::endl;
+        std::clog << "failed to get connector" << std::endl;
         return;
     }
     mode_ = connector_->modes[0]; // 
     drmModeEncoder *enc = drmModeGetEncoder(drm_fd_, connector_->encoder_id);
     if (!enc) {
-        std::cerr << "failed to get encoder" << std::endl;
+        std::clog << "failed to get encoder" << std::endl;
         return;
     }
     crtc_ = drmModeGetCrtc(drm_fd_, enc->crtc_id);
     drmModeFreeEncoder(enc);
     if (!crtc_) {
-        std::cerr << "failed to get crtc" << std::endl;
+        std::clog << "failed to get crtc" << std::endl;
         return;
     }
     dev_ = gbm_create_device(drm_fd_);

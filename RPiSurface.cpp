@@ -4,6 +4,7 @@
 #include "ugsurface/PlatformSurface.h"
 #include <cstdio>
 #include <algorithm>
+#include <iostream>
 #include <bcm_host.h>
 #include <EGL/egl.h>
 
@@ -16,7 +17,7 @@ static int getDisplayId() { // vc_dispmanx_types.h: DISPMANX_ID_MAIN_LCD 0, DISP
     if (e)
         id = std::atoi(e);
     id = std::min(std::max(id, DISPMANX_ID_MAIN_LCD), DISPMANX_ID_FORCE_TV);
-    printf("dispmanx id: %d\n", id);
+    std::clog << "dispmanx id: " << id << std::endl;
     return id;
 }
 
@@ -60,7 +61,7 @@ EGL_DISPMANX_WINDOW_T* RPiSurface::createFullscreenWindow(DISPMANX_DISPLAY_HANDL
     if (ret < 0)
         return nullptr;
     resize(w, h); // resize event
-    printf("creating dispmanx fullscreen window %dx%d...\n", w, h);
+    std::clog << "creating dispmanx fullscreen window" << w << "x" << h << std::endl;
     const VC_RECT_T dst = {0, 0, w, h};
     const VC_RECT_T src = {0, 0, w << 16, h << 16};
 

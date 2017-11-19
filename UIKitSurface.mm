@@ -45,7 +45,7 @@ static const NSNotificationName kAppNotifications[] = {
         if([object valueForKeyPath:keyPath] != [NSNull null])
             rect = [[object valueForKeyPath:keyPath] CGRectValue];
         const NSString *msg = [NSString stringWithFormat:@"%@ geometry changes from %fx%f to %fx%f", object, rect0.size.width, rect0.size.height, rect.size.width, rect.size.height];
-        std::cout << msg.UTF8String << std::endl;
+        std::clog << msg.UTF8String << std::endl;
         geo_cb_(rect.size.width, rect.size.height);
     }
 }

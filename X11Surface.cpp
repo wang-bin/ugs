@@ -34,18 +34,18 @@ UGSURFACE_NS_BEGIN
 
 Display* open_x11_display() {
     if (!XDisplayName) {
-        std::cout << "weak symbol XDisplayName is null. libX11 is not loaded? set LD_PRELOAD to load X11" << std::endl;
+        std::clog << "weak symbol XDisplayName is null. libX11 is not loaded? set LD_PRELOAD to load X11" << std::endl;
         return nullptr;
     }
     static const char* name = XDisplayName(nullptr);
     Display* d = XOpenDisplay(name);
     if (!d) {
-        printf("failed to open default display. try to open :0\n");
+        std::clog << "failed to open default display. try to open :0" << std::endl;
         static const char xdefault[] = ":0";
         name = xdefault;
         d = XOpenDisplay(name);
     }
-    printf("open x11 display: %s, %p\n", name, d);
+    std::clog << "open x11 display: " << name << ", result: " << d << std::endl;
     return d;
 }
 
@@ -101,10 +101,10 @@ PlatformSurface* create_x11_surface() { return new X11Surface();}
 X11Surface::X11Surface()
     : PlatformSurface()
 {
-    printf("creating x11 window...\n");
+    std::clog << "creating x11 window..." << std::endl;
     display_ = (Display*)nativeResource(); // TODO: open and return
     if (!display_) {
-        std::cerr << "failed to get x11 display" << std::endl;
+        std::clog << "failed to get x11 display" << std::endl;
         return;
     }
 #if 1
