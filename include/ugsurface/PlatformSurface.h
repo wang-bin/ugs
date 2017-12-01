@@ -2,6 +2,7 @@
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
 #pragma once
+#include <cinttypes> //vs2013
 #include <limits>
 #include "export.h"
 #include <functional>
