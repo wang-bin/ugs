@@ -1,8 +1,8 @@
 {
-    // TODO: git submodule
     // See https://go.microsoft.com/fwlink/?LinkId=733558
     // for the documentation about the tasks.json format
     "version": "0.1.0",
+    //"runner": "terminal",
     "command": "cmake", // cmd /C for windows cmake builtin android support
     //"isShellCommand": true,
     "options": {
@@ -17,8 +17,8 @@
                     , "-B${workspaceRoot}/build/macOS10.6"
                     , "-GNinja"
                     , "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.6"
-                    , "-DCMAKE_C_COMPILER=clang-4.0"
-                    , "-DCMAKE_CXX_COMPILER=clang++-4.0" // clang-4.0 libc++ uses clock_gettime. 3.9 crash
+                    , "-DCMAKE_C_COMPILER=clang-5.0"
+                    , "-DCMAKE_CXX_COMPILER=clang++-5.0" // clang-4.0 libc++ uses clock_gettime. 3.9 crash
             ]
         },
         {
@@ -48,12 +48,12 @@
         },
         {
             "taskName": "config.iOS",
-            "args": [ "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+            "args": [ "-DCMAKE_BUILD_TYPE=Debug"
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/iOS"
                     , "-GNinja"
                     , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
-                    , "-DIOS_DEPLOYMENT_TARGET=6.0"
+                    , "-DIOS_DEPLOYMENT_TARGET=5.0"
                     , "-DIOS_ARCH=armv7;arm64;i386;x86_64"
                     //, "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
                     , "-DIOS_BITCODE=1"
@@ -74,9 +74,9 @@
                     , "-B${workspaceRoot}/build/iOS64"
                     , "-GNinja"
                     , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
-                    , "-DIOS_DEPLOYMENT_TARGET=6.0"
+                    , "-DIOS_DEPLOYMENT_TARGET=8.0"
                     , "-DIOS_ARCH=arm64;x86_64"
-                    //, "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
+                    , "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
                     , "-DIOS_BITCODE=1"
             ]
         },
@@ -152,7 +152,7 @@
 
         {
             "taskName": "config.android.armeabi",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_INSTALL_PREFIX=${workspaceRoot}/build/android-armeabi/install"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=clang"     // clang does not work with gnu_stl+c++11
@@ -163,7 +163,7 @@
                     , "-B${workspaceRoot}/build/android-armeabi"
                     , "-GNinja"
                     // cmake 3.7 options
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}" // windows dir error
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}" // windows dir error
                     , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
                     , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
 
@@ -180,7 +180,7 @@
         },
         {
             "taskName": "config.android.armv7a",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=clang"     // clang does not work with gnu_stl+c++11
                     , "-DANDROID_STL=c++_shared"
@@ -190,13 +190,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-armeabi-v7a"
                     , "-GNinja"
-                    // cmake 3.7 options
-                    //, "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
-                    //, "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
-                    //, "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
-                    //, "-DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a" //CMAKE_SYSTEM_PROCESSOR
-                    //, "-DCMAKE_SYSTEM_VERSION=14"
-                    //, "--trace"
+                    //, "-DUSE_LTO=AUTO"
             ]
             , "isBuildCommand": false
         },
@@ -209,8 +203,31 @@
             , "suppressTaskName": true
         },
         {
+            "taskName": "config.android.armv7a-static",
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
+                    , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                    , "-DANDROID_TOOLCHAIN=clang"     // clang does not work with gnu_stl+c++11
+                    , "-DANDROID_STL=c++_static"
+                    , "-DANDROID_ABI=armeabi-v7a"
+                    , "-DANDROID_PLATFORM=android-14" // api 24 can not locate __aeabi_memcpy at runtime
+                    //, "-DANDROID_ARM_MODE=arm" // fixed in r13b. https://github.com/android-ndk/ndk/issues/152 https://github.com/cocos2d/cocos2d-x/issues/16033
+                    , "-H${workspaceRoot}"
+                    , "-B${workspaceRoot}/build/android-armeabi-v7a-static"
+                    , "-GNinja"
+            ]
+            , "isBuildCommand": false
+        },
+        {
+            "taskName": "build.android.armv7a-static",
+            "args": [ "--build"
+                    , "${workspaceRoot}/build/android-armeabi-v7a-static"
+            ]
+            , "isBuildCommand": true
+            , "suppressTaskName": true
+        },
+        {
             "taskName": "config.android.arm64",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=clang"     // clang does not work with gnu_stl+c++11
                     , "-DANDROID_STL=c++_shared"
@@ -219,12 +236,6 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-arm64"
                     , "-GNinja"
-                    // cmake 3.7 options
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
-                    , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
-                    , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
-                    //, "-DCMAKE_ANDROID_ARCH_ABI=arm64" //CMAKE_SYSTEM_PROCESSOR
-                    //, "-DCMAKE_SYSTEM_VERSION=21"
                     , "-DUSE_LTO=AUTO"
 
             ]
@@ -240,7 +251,7 @@
         },
         {
             "taskName": "config.android.x86",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env.ANDROID_NDK}/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=clang"     // clang does not work with gnu_stl+c++11
                     , "-DANDROID_STL=c++_shared"
@@ -250,12 +261,6 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-x86"
                     , "-GNinja"
-                    // cmake 3.7 options
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
-                    , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
-                    , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
-                    //, "-DCMAKE_ANDROID_ARCH_ABI=ax86" //CMAKE_SYSTEM_PROCESSOR
-                    //, "-DCMAKE_SYSTEM_VERSION=14"
             ]
             , "isBuildCommand": false
         },
@@ -276,7 +281,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-armeabi-cmake"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
                     , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=armeabi" //CMAKE_SYSTEM_PROCESSOR
@@ -300,7 +305,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-armv7a-cmake"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
                     , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a" //CMAKE_SYSTEM_PROCESSOR
@@ -324,7 +329,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-arm64-cmake"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
                     , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=arm64-v8a" //CMAKE_SYSTEM_PROCESSOR
@@ -348,7 +353,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-x86-cmake"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=/Users/wangbin/dev/andriod/android-ndk-r15"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
                     , "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=x86" //CMAKE_SYSTEM_PROCESSOR
@@ -374,10 +379,10 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-armeabi-cmake-gcc"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_STL_TYPE=gnustl_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=armeabi" //CMAKE_SYSTEM_PROCESSOR
-                    , "-DCMAKE_SYSTEM_VERSION=9"
+                    , "-DCMAKE_SYSTEM_VERSION=14"
 
             ]
             , "isBuildCommand": false
@@ -397,10 +402,10 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-armv7a-cmake-gcc"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_STL_TYPE=gnustl_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a" //CMAKE_SYSTEM_PROCESSOR
-                    , "-DCMAKE_SYSTEM_VERSION=9"
+                    , "-DCMAKE_SYSTEM_VERSION=14"
 
             ]
             , "isBuildCommand": false
@@ -420,7 +425,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-arm64-gcc-cmake"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_STL_TYPE=gnustl_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=arm64-v8a" //CMAKE_SYSTEM_PROCESSOR
                     , "-DCMAKE_SYSTEM_VERSION=21"
@@ -443,10 +448,10 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-x86-gcc-cmake"
                     , "-GNinja"
-                    , "-DCMAKE_ANDROID_NDK=${env.ANDROID_NDK}"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_STL_TYPE=gnustl_shared"
                     , "-DCMAKE_ANDROID_ARCH_ABI=x86" //CMAKE_SYSTEM_PROCESSOR
-                    , "-DCMAKE_SYSTEM_VERSION=9"
+                    , "-DCMAKE_SYSTEM_VERSION=14"
 
             ]
             , "isBuildCommand": false
@@ -463,7 +468,7 @@
 
         {
             "taskName": "config.android.armeabi.gcc",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=gcc"
                     , "-DANDROID_STL=gnustl_shared"
@@ -484,8 +489,35 @@
             , "suppressTaskName": true //?
         },
         {
+            "taskName": "config.android.armeabi.gnustl",
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
+                    , "-DCMAKE_INSTALL_PREFIX=${workspaceRoot}/build/android-armeabi/install"
+                    , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                    , "-DANDROID_TOOLCHAIN=clang"     // clang does not work with gnu_stl+c++11
+                    , "-DANDROID_STL=gnustl_shared"
+                    , "-DANDROID_ABI=armeabi"
+                    , "-DANDROID_PLATFORM=android-14" // api 24 can not locate __aeabi_memcpy at runtime
+                    , "-H${workspaceRoot}"
+                    , "-B${workspaceRoot}/build/android-armeabi-gnustl"
+                    , "-GNinja"
+                    // cmake 3.7 options
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}" // windows dir error
+                    , "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
+                    , "-DCMAKE_ANDROID_STL_TYPE=gnustl_shared"
+            ]
+            , "isBuildCommand": false
+        },
+        {
+            "taskName": "build.android.armeabi.gnustl",
+            "args": [ "--build"
+                    , "${workspaceRoot}/build/android-armeabi-gnustl"
+            ]
+            , "isBuildCommand": true
+            , "suppressTaskName": true //?
+        },
+        {
             "taskName": "config.android.armv7a.gcc",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=gcc"
                     , "-DANDROID_STL=gnustl_shared"
@@ -508,7 +540,7 @@
         },
         {
             "taskName": "config.android.arm64.gcc",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=gcc"
                     , "-DANDROID_STL=gnustl_shared"
@@ -518,7 +550,6 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/android-arm64-gcc"
                     , "-GNinja"
-                    , "--trace"
             ]
             , "isBuildCommand": false
         },
@@ -532,7 +563,7 @@
         },
         {
             "taskName": "config.android.x86.gcc",
-            "args": [ "-DCMAKE_TOOLCHAIN_FILE=/Users/wangbin/dev/andriod/android-ndk-r15/build/cmake/android.toolchain.cmake"
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"
                     , "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
                     , "-DANDROID_TOOLCHAIN=gcc"     // clang does not work with gnu_stl+c++11
                     , "-DANDROID_STL=gnustl_shared"
@@ -542,7 +573,7 @@
                     , "-B${workspaceRoot}/build/android-x86-gcc"
                     , "-GNinja"
                     // cmake 3.7 options
-                    , "-DCMAKE_ANDROID_NDK=/Users/wangbin/dev/andriod/android-ndk-r15"
+                    , "-DCMAKE_ANDROID_NDK=${env:ANDROID_NDK}"
                     , "-DCMAKE_ANDROID_STL_TYPE=gnustl_shared"
             ]
             , "isBuildCommand": false
@@ -556,6 +587,77 @@
             , "suppressTaskName": true
         },
 
+        {
+            "taskName": "config.rpi.clang",
+            "args": [ "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/rpi.toolchain.cmake"
+                        , "-DCMAKE_BUILD_TYPE=Release"
+                        , "-H${workspaceRoot}"
+                        , "-B${workspaceRoot}/build/rpi.clang"
+                        , "-GNinja"
+                        //, "--trace"
+                        /*
+                        , "-DCMAKE_SYSTEM_NAME=Linux" // assume host build if not set, host flags will be used, e.g. apple clang flags are added on macOS
+                        , "-DCMAKE_SYSTEM_PROCESSOR=armv6"
+                        , "-DCMAKE_SYSROOT=${env:RPI_SYSROOT}"
+                        , "-DCMAKE_C_COMPILER=clang-5.0"
+                        , "-DCMAKE_CXX_COMPILER=clang++-5.0"
+                        // -fuse-ld=lld must be set in c flags to pass cmake test, but will get warning: argument unused during compilation: '-fuse-ld=lld' [-Wunused-command-line-argument]
+                        , "-DCMAKE_C_FLAGS=-Qunused-arguments -fuse-ld=lld -stdlib=libc++ -target arm-rpi-linux-gnueabihf -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp -marm"
+                        , "-DCMAKE_CXX_FLAGS=-Qunused-arguments -fuse-ld=lld -stdlib=libc++ -target arm-rpi-linux-gnueabihf -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp -marm"
+                        // supc++: __cxa_thread_atexit. need libc++abi?
+                        , "-DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++ -lsupc++ -s -fuse-ld=lld"
+                        , "-DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ -lsupc++ -s -fuse-ld=lld"
+                        //, "-DCMAKE_POLICY_DEFAULT_CMP0056=NEW"
+                        , "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON"
+                        //, "-DCMAKE_AR=llvm-ar"
+                        , "-DCMAKE_RANLIB=/usr/local/bin/llvm-ranlib" // macOS ranlib does not work. why expand to $PWD/llvm-ranlib?
+                    */]
+        },
+        {
+            "taskName": "build.rpi.clang",
+            "args": [ "--build"
+                    , "${workspaceRoot}/build/rpi.clang"
+            ]
+            , "isBuildCommand": true
+            , "suppressTaskName": true //?
+        },
+
+
+        {
+            "taskName": "config.mingw64",
+            "args": [ "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                        , "-H${workspaceRoot}"
+                        , "-B${workspaceRoot}/build/mingw64"
+                        , "-GNinja"
+                        , "-DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc"
+                        , "-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++"
+                    ]
+        },  
+        {
+            "taskName": "build.mingw64",
+            "args": [ "--build"
+                    , "${workspaceRoot}/build/mingw64"
+            ]
+            , "isBuildCommand": true
+            , "suppressTaskName": true //?
+        },
+        {
+            "taskName": "config.vs2017x64",
+            "args": [ "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                        , "-H${workspaceRoot}"
+                        , "-B${workspaceRoot}/build/vs2017x64"
+                        , "-G"
+                        , "Visual Studio 15 2017 Win64"
+                ]
+        },  
+        {
+            "taskName": "build.vs2017x64",
+            "args": [ "--build"
+                    , "${workspaceRoot}/build/vs2017x64"
+            ]
+            , "isBuildCommand": true
+            , "suppressTaskName": true //?
+        },
         {
             "taskName": "config.vs2015x64",
             "args": [ "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
