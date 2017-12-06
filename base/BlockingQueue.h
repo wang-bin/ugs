@@ -3,12 +3,12 @@
  * Original code is from QtAV project
  */
 #pragma once
-#include <cstdio>
+
 #include <algorithm>
-#include <functional>
-#include <mutex>
-#include <list>
 #include <condition_variable>
+#include <list>
+#include <mutex>
+#include <type_traits>
 #include <utility>
 template <typename T, template <typename...> class C = std::list> // TODO: use std::list by default. queue is just a wrapper
 /*!
@@ -80,7 +80,7 @@ public:
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
             ///empty_.notify_one();
-            if (timeout <= 0 || full_.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
+            if (timeout <= 0 || !full_.wait_for(lock, std::chrono::milliseconds(timeout), [this]{return queue_.size() < max_;}))
                 return false;
         }
         push_waiting_ = false;
@@ -100,7 +100,7 @@ public:
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
             ///empty_.notify_one();
-            if (timeout <= 0 || full_.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
+            if (timeout <= 0 || !full_.wait_for(lock, std::chrono::milliseconds(timeout), [this]{return queue_.size() < max_;}))
                 return false;
         }
         push_waiting_ = false; // set after notify_one()?
@@ -119,7 +119,7 @@ public:
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
             ///empty_.notify_one();
-            full_.wait(lock);
+            full_.wait(lock, [this]{return queue_.size() < max_;});
         }
         push_waiting_ = false; // set after notify_one()?
         queue_.push_back(std::forward<T>(t));
@@ -133,7 +133,7 @@ public:
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
             ///empty_.notify_one(); // min_ == max_
-            full_.wait(lock);
+            full_.wait(lock, [this]{return queue_.size() < max_;});
         }
         push_waiting_ = false; // set after notify_one()?
         queue_.push_back(t);
@@ -150,7 +150,7 @@ public:
             pop_waiting_ = true;
             ///push_waiting_ = false; // ensure reset without push();
             ///full_.notify_one();
-            if (timeout <= 0 || empty_.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
+            if (timeout <= 0 || !empty_.wait_for(lock, std::chrono::milliseconds(timeout), [this]{return !queue_.empty();}))
                 return 0;
         }
         const size_t nb = queue_.size();
@@ -173,12 +173,7 @@ public:
             pop_waiting_ = true;
             ///push_waiting_ = false; // ensure reset without push();
             ///full_.notify_one();
-            empty_.wait(lock);
-        }
-        if (queue_.empty()) {// FIXME: why it fucking happens?
-            pop_waiting_ = true;
-            printf("Shit happens. queue is still empty\n");
-            empty_.wait(lock);
+            empty_.wait(lock, [this]{return !queue_.empty();});
         }
         const size_t nb = queue_.size();
         pop_waiting_ = nb == 1 && min_ > 0; // set after notify_one()?
@@ -210,10 +205,11 @@ public:
     /*!
      * distance
      * \brief return the distance defined by user, for example elements count, total bytes, duration etc.
-     * \param f distance function, parameter it0, it1 is the cbegin() and cend() of container. You may need (it1-1) to access the last element
+     * \param f distance function, parameters are cbegin() and cend() of container. You may need (it1-1) to access the last element
      */
-    template<typename R>
-    R distance(std::function<R(const_iterator it0, const_iterator it1)> f) const {
+    template<class F>
+    auto distance(F f) const -> decltype(f(std::declval<queue_t>().cbegin(), std::declval<queue_t>().cend())) {
+        using R = decltype(distance(f));
         std::lock_guard<std::mutex> lock(mutex_);
         if (queue_.empty())
             return R(0);
