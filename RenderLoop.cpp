@@ -25,7 +25,7 @@ public:
     ~Private() {
         assert(!render_thread.joinable() && "rendering thread can not be joinable in dtor. MUST call stop() & waitForStopped() first");
     }
-    void schedule(std::function<void()> task) {
+    void schedule(std::function<void()>&& task) {
         tasks.push(std::move(task));
     }
 
