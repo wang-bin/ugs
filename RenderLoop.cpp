@@ -148,9 +148,9 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     d->schedule([=]{
         if (!process(sp)) { // create=>resize=>close event in 1 process()
             clog << "deleting surface scheduled by surface add callback..." << endl;
-            auto it = find(d->surfaces.cbegin(), d->surfaces.cend(), sp);
+            auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             delete *it;
-            d->surfaces.erase(it);
+            d->surfaces.erase(it); // gcc4.8 can not erase a const_iterator
         }
     });
     return ss;
