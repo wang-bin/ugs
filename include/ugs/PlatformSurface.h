@@ -7,16 +7,16 @@
 #include "export.h"
 #include <functional>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 /*!
  * \brief javaVM
  * Set/Get current java vm
  * \param vm null to get current vm
  * \return current vm
  */
-UGSURFACE_API void* javaVM(void* vm = nullptr);
+UGS_API void* javaVM(void* vm = nullptr);
 
-class UGSURFACE_API PlatformSurface {
+class UGS_API PlatformSurface {
 public:
     class Event {
     public:
@@ -89,4 +89,4 @@ private:
     Private* d;
 };
 
-UGSURFACE_NS_END
+UGS_NS_END

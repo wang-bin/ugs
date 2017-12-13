@@ -7,14 +7,14 @@ dependencies:
   override:
 compile:
   override:
-    - cmake -GNinja -H$PWD -B$PWD/build/host -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$PWD/ugsurface-linux64
+    - cmake -GNinja -H$PWD -B$PWD/build/host -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$PWD/ugs-linux64
     - cmake --build build/host -- -v
     - ls -lh build/host
     - cmake -P build/host/cmake_install.cmake
-    - tar Jcvf $CIRCLE_ARTIFACTS/ugsurface-linux64.tar.xz ugsurface-linux64
+    - tar Jcvf $CIRCLE_ARTIFACTS/ugs-linux64.tar.xz ugs-linux64
 test:
   override:
-    - readelf -d ./build/host/libugsurface.so
+    - readelf -d ./build/host/libugs.so
 checkout:
   post:
     - git submodule update --init

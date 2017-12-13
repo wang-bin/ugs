@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include <cassert>
 #include <iostream>
 
@@ -30,7 +30,7 @@ extern "C" {
 #include<X11/Xlib.h>
 }
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 
 Display* open_x11_display() {
     if (!XDisplayName) {
@@ -156,4 +156,4 @@ void X11Surface::processEvents() {
         }
     }    
 }
-UGSURFACE_NS_END
+UGS_NS_END

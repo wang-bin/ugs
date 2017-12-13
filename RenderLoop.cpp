@@ -1,17 +1,16 @@
 /*
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/RenderLoop.h"
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/RenderLoop.h"
+#include "ugs/PlatformSurface.h"
 #include "base/BlockingQueue.h"
 #include <cassert>
-#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <thread>
 #include <iostream>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 using namespace std;
 
 class RenderLoop::SurfaceContext {
@@ -225,4 +224,4 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
     surface->release();
     return surface;
 }
-UGSURFACE_NS_END
+UGS_NS_END

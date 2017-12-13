@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include <iostream>
 extern "C" {
 #include <xf86drm.h>
@@ -10,8 +10,8 @@ extern "C" {
 #include <fcntl.h>
 #include <unistd.h>
 }
-UGSURFACE_NS_BEGIN
-class GBMSurface : public PlatformSurface
+UGS_NS_BEGIN
+class GBMSurface final: public PlatformSurface
 {
 public:
     GBMSurface();
@@ -126,4 +126,4 @@ void GBMSurface::submit()
 	bo_ = bo;
 	fb_ = fb;
 }
-UGSURFACE_NS_END
+UGS_NS_END

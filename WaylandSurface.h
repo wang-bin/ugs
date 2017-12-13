@@ -1,13 +1,13 @@
 /*
  * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 extern "C" {
 #include <wayland-client.h>
 #include <wayland-egl.h>
 }
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 class WaylandSurface : public PlatformSurface
 {
 public:
@@ -31,4 +31,4 @@ protected:
     wl_surface *surface_ = nullptr;
     wl_shell_surface *shell_surface_ = nullptr;
 };
-UGSURFACE_NS_END
+UGS_NS_END

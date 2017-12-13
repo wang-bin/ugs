@@ -1,7 +1,7 @@
-if(NOT DEFINED UGSURFACE_PROJECT_NAME)
-  set(UGSURFACE_PROJECT_NAME ugsurface)
+if(NOT DEFINED UGS_PROJECT_NAME)
+  set(UGS_PROJECT_NAME ugs)
 else()
-    add_definitions(-DUGSURFACE_NS=${UGSURFACE_PROJECT_NAME})
+    add_definitions(-DUGS_NS=${UGS_PROJECT_NAME})
 endif()
 if(POLICY CMP0025)
 # MUST call before project() and enable_language
@@ -14,7 +14,7 @@ set(PROJECT_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_MICRO})
 if(NOT CMAKE_VERSION VERSION_LESS 3.0)
   cmake_policy(SET CMP0048 OLD)
 endif()
-project(${UGSURFACE_PROJECT_NAME}) #VERSION ${PROJECT_VERSION}) # VERSION: 3.0
+project(${UGS_PROJECT_NAME}) #VERSION ${PROJECT_VERSION}) # VERSION: 3.0
 set(TARGET_NAME ${PROJECT_NAME})
 set(SO_VERSION ${VERSION_MAJOR})
 cmake_minimum_required(VERSION 2.8)
@@ -104,7 +104,7 @@ endif()
 
 #########################################################################################################
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-option(UGSURFACE_RELOCATABLE "Build ${PROJECT_NAME} as a relocatable object instead of a shared library" OFF)
+option(UGS_RELOCATABLE "Build ${PROJECT_NAME} as a relocatable object instead of a shared library" OFF)
 
 set(EXTRA_CFLAGS)
 set(SDK_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -166,8 +166,8 @@ endif()
 
 add_library(${TARGET_NAME}-shared SHARED ${SRC})
 add_library(${TARGET_NAME}-static STATIC ${SRC})
-target_compile_definitions(${TARGET_NAME}-shared PRIVATE BUILD_UGSURFACE_LIB)
-target_compile_definitions(${TARGET_NAME}-static PRIVATE BUILD_UGSURFACE_STATIC)
+target_compile_definitions(${TARGET_NAME}-shared PRIVATE BUILD_UGS_LIB)
+target_compile_definitions(${TARGET_NAME}-static PRIVATE BUILD_UGS_STATIC)
 
 if(EXTRA_INCLUDE)
   list(REMOVE_DUPLICATES EXTRA_INCLUDE)
@@ -184,7 +184,7 @@ target_include_directories(${TARGET_NAME}-static
 )
 
 set_target_properties(${TARGET_NAME}-shared PROPERTIES
-    RELOCATABLE ${UGSURFACE_RELOCATABLE} # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
+    RELOCATABLE ${UGS_RELOCATABLE} # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
     MACOSX_RPATH ON
     FRAMEWORK ON
     VERSION ${PROJECT_VERSION}
@@ -202,7 +202,7 @@ if(APPLE)
 endif()
 
 set(LINK_TO_SHARED 1) # only dso needs to link to shared libs, static libs need nothing, relocatable objects only need to link to static libs
-if(UGSURFACE_RELOCATABLE)
+if(UGS_RELOCATABLE)
   set(LINK_TO_SHARED 0)
 else()
   set_rpath()

@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include <string>
 #include <windows.h>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 class Win32Surface final: public PlatformSurface
 {
 public:
@@ -35,7 +35,7 @@ LRESULT CALLBACK Win32Surface::WinProc(HWND handle, UINT message, WPARAM wParam,
 Win32Surface::Win32Surface(int x, int y, int w, int h)
     : PlatformSurface()
 {
-    static const wchar_t kClassName[] = L"UGSURFACE_Window";
+    static const wchar_t kClassName[] = L"UGS_Window";
     WNDCLASSW win_class{};
     win_class.style         = CS_OWNDC; // CS_OWNDC: required by wgl? but 0 seems ok: https://www.opengl.org/wiki/Creating_an_OpenGL_Context_(WGL)
     win_class.lpfnWndProc   = &Win32Surface::WinProc;
@@ -108,4 +108,4 @@ void Win32Surface::processEvent(UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
 }
-UGSURFACE_NS_END
+UGS_NS_END

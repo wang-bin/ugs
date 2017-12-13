@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #import <UIKit/UIApplication.h>
 #import <UIKit/UIView.h>
 #include <iostream>
@@ -63,7 +63,7 @@ static const NSNotificationName kAppNotifications[] = {
 }
 @end
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 class UIKitSurface final: public PlatformSurface
 {
 public:
@@ -139,4 +139,4 @@ private:
 };
 
 PlatformSurface* create_uikit_surface() { return new UIKitSurface();}
-UGSURFACE_NS_END
+UGS_NS_END

@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include <cassert>
 #include <WF/wfc.h>
 #include <bcm_host.h>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 #define NO_ATTRIBUTES nullptr
 
 class OpenWFCSurface final : public PlatformSurface
@@ -68,4 +68,4 @@ PlatformSurface* create_wfc() {
     return new OpenWFCSurface();
 }
 
-UGSURFACE_NS_END
+UGS_NS_END

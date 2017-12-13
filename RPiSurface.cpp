@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include <cstdio>
 #include <algorithm>
 #include <iostream>
 #include <bcm_host.h>
 #include <EGL/egl.h>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 static int getDisplayId() { // vc_dispmanx_types.h: DISPMANX_ID_MAIN_LCD 0, DISPMANX_ID_AUX_LCD 1, DISPMANX_ID_HDMI 2, DISPMANX_ID_SDTV 3, DISPMANX_ID_FORCE_LCD 4, DISPMANX_ID_FORCE_TV 5
     static int id = -1;
     if (id >= 0)
@@ -84,4 +84,4 @@ EGL_DISPMANX_WINDOW_T* RPiSurface::createFullscreenWindow(DISPMANX_DISPLAY_HANDL
     return win;
 }
 
-UGSURFACE_NS_END
+UGS_NS_END

@@ -6,7 +6,7 @@
 #include <cstring>
 #include <iostream>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 WaylandSurface::WaylandSurface() : PlatformSurface()
 {
     display_ = wl_display_connect(nullptr);
@@ -75,4 +75,4 @@ void WaylandSurface::shell_surface_configure(void *data, struct wl_shell_surface
 void WaylandSurface::shell_surface_popup_done(void *data, struct wl_shell_surface *shell_surface)
 {    
 }
-UGSURFACE_NS_END
+UGS_NS_END

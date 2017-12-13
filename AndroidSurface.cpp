@@ -4,12 +4,12 @@
 /*
  * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include <jni.h>
 #include <android/native_window_jni.h>
 #include "base/jmi/jmi.h"
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 void* javaVM(void* vm)
 {
     return jmi::javaVM(static_cast<JavaVM*>(vm));
@@ -69,4 +69,4 @@ private:
 };
 
 PlatformSurface* create_android_surface() { return new AndroidSurface();}
-UGSURFACE_NS_END
+UGS_NS_END

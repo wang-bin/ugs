@@ -2,7 +2,7 @@
  * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
  */
 #include "WaylandSurface.h"
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 
 class WaylandEGLSurface final : public WaylandSurface
 {
@@ -28,4 +28,4 @@ private:
 };
 
 PlatformSurface* create_wayland_surface() { return new WaylandEGLSurface(); }
-UGSURFACE_NS_END
+UGS_NS_END

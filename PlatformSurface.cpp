@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
-#include "ugsurface/PlatformSurface.h"
+#include "ugs/PlatformSurface.h"
 #include "base/BlockingQueue.h"
 #include <chrono>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 extern PlatformSurface* create_android_surface();
 extern PlatformSurface* create_uikit_surface();
 extern PlatformSurface* create_wfc();
@@ -166,4 +166,4 @@ void PlatformSurface::pushEvent(const Event &e)
     if (d->cb)
         d->cb();
 }
-UGSURFACE_NS_END
+UGS_NS_END

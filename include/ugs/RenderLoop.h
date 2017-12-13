@@ -6,9 +6,9 @@
 #include <functional>
 #include <memory>
 
-UGSURFACE_NS_BEGIN
+UGS_NS_BEGIN
 class PlatformSurface;
-class UGSURFACE_API RenderLoop
+class UGS_API RenderLoop
 {
 public:
     RenderLoop();
@@ -48,4 +48,4 @@ private:
     class Private;
     Private* d;
 };
-UGSURFACE_NS_END
+UGS_NS_END
