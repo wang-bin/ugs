@@ -34,7 +34,9 @@ public:
     /// the following functions are called in rendering thread
     void onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
     void onDraw(std::function<bool(PlatformSurface*)> cb);
-    void onClose(std::function<void(PlatformSurface*)> cb); // destroy gfx resources in the callback
+    // resetNativeHandle(nullptr)=>close()
+    void onDestroyContext(std::function<void(PlatformSurface*)> cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
+    void onClose(std::function<void(PlatformSurface*)> cb); // called when surface is about to be destroyed
 protected:
     virtual void* createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx) = 0;

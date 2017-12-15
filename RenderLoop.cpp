@@ -52,6 +52,7 @@ public:
     function<void(PlatformSurface*,int,int)> resize_cb = nullptr;
     function<bool(PlatformSurface*)> draw_cb = nullptr;
     function<void(PlatformSurface*)> close_cb = nullptr;
+    function<void(PlatformSurface*)> ctx_destroy_cb = nullptr;
     BlockingQueue<function<void()>> tasks;
 };
 
@@ -134,6 +135,11 @@ void RenderLoop::onDraw(function<bool(PlatformSurface*)> cb)
     d->draw_cb = cb;
 }
 
+void RenderLoop::onDestroyContext(function<void(PlatformSurface*)> cb)
+{
+    d->ctx_destroy_cb = cb;
+}
+
 void RenderLoop::onClose(function<void(PlatformSurface*)> cb)
 {
     d->close_cb = cb;
@@ -166,7 +172,9 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
     while (surface->popEvent(e, 0)) { // do no always try pop
         if (e.type == PlatformSurface::Event::Close) {
             std::clog << surface << "->PlatformSurface::Event::Close" << std::endl;
-            if (d->close_cb)
+            if (d->ctx_destroy_cb)
+                d->ctx_destroy_cb(surface);
+            if (d->close_cb) // TODO: after destroyRenderContext()
                 d->close_cb(surface);
             destroyRenderContext(surface, ctx);
             surface->release();
@@ -188,8 +196,11 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
             std::clog << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
-            if (e.handle.before)
+            if (e.handle.before) {
+                if (d->ctx_destroy_cb)
+                    d->ctx_destroy_cb(surface);
                 destroyRenderContext(surface, ctx);
+            }
             sp->ctx = nullptr;
             surface->release(); // assume createRenderContext() will not call any gl command, so surface->acquire() is not required.
             if (!e.handle.after)
