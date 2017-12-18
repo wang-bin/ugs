@@ -52,7 +52,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/iOS"
                     , "-GNinja"
-                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
+                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/tools/ios.cmake"
                     , "-DIOS_DEPLOYMENT_TARGET=5.0"
                     , "-DIOS_ARCH=armv7;arm64;i386;x86_64"
                     //, "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
@@ -73,7 +73,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/iOS64"
                     , "-GNinja"
-                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
+                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/tools/ios.cmake"
                     , "-DIOS_DEPLOYMENT_TARGET=8.0"
                     , "-DIOS_ARCH=arm64;x86_64"
                     , "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
@@ -94,7 +94,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/iOS.device"
                     , "-GNinja"
-                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
+                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/tools/ios.cmake"
                     , "-DIOS_DEPLOYMENT_TARGET=6.0"
                     , "-DIOS_ARCH=armv7;arm64"
                     //, "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
@@ -115,7 +115,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/iOS5"
                     , "-GNinja"
-                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
+                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/tools/ios.cmake"
                     , "-DIOS_DEPLOYMENT_TARGET=5.0"
                     , "-DIOS_ARCH=armv7"
             ]
@@ -134,7 +134,7 @@
                     , "-H${workspaceRoot}"
                     , "-B${workspaceRoot}/build/iOS.simulator"
                     , "-GNinja"
-                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/ios/ios.cmake"
+                    , "-DCMAKE_TOOLCHAIN_FILE=${workspaceRoot}/cmake/tools/ios.cmake"
                     , "-DIOS_DEPLOYMENT_TARGET=6.0"
                     , "-DIOS_ARCH=i386;x86_64"
                     //, "-DIOS_EMBEDDED_FRAMEWORK=1" // valid since 8.0
