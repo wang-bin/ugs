@@ -113,7 +113,9 @@ set(SRC
     RenderLoop.cpp
     )
 if(WIN32)
-  list(APPEND SRC Win32Surface.cpp)
+  if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+    list(APPEND SRC Win32Surface.cpp)
+  endif()
 endif()
 if(ANDROID)
   list(APPEND SRC AndroidSurface.cpp base/jmi/jmi.cpp)
@@ -134,7 +136,7 @@ if(X11_FOUND)
   set_source_files_properties(X11Surface.cpp PROPERTIES COMPILE_FLAGS -I${X11_X11_INCLUDE_PATH})
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_X11=1")
   if(APPLE)
-    # already marked as weak in cpp, so -weak_library is not required.
+    # already marked as weak in cpp, so -weak-lX11 is not required.
     list(APPEND EXTRA_DYLIBS -flat_namespace -Wl,-undefined,dynamic_lookup ${X11_X11_LIB})
   endif()
   list(APPEND EXTRA_DYLIBS ${X11_X11_LIB})

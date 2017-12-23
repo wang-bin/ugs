@@ -4,6 +4,12 @@
 #include "ugs/PlatformSurface.h"
 #include "base/BlockingQueue.h"
 #include <chrono>
+#ifdef WINAPI_FAMILY
+# include <winapifamily.h>
+# if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#   define UGS_OS_WINRT
+# endif
+#endif //WINAPI_FAMILY
 
 UGS_NS_BEGIN
 extern PlatformSurface* create_android_surface();
@@ -16,6 +22,7 @@ extern PlatformSurface* create_wayland_surface();
 extern PlatformSurface* create_gbm_surface();
 typedef PlatformSurface* (*surface_creator)();
 
+// TODO: print what is creating
 PlatformSurface* PlatformSurface::create(Type type)
 {
     // android, ios surface does not create native handle internally, so do not check nativeHandle()
@@ -40,7 +47,7 @@ PlatformSurface* PlatformSurface::create(Type type)
 #endif
     // fallback to platform default surface
     for (auto create_win : std::initializer_list<surface_creator>{ // vs2013 does not support {}, it requires explicit std::initializer_list<surface_creator>{}
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(UGS_OS_WINRT)
         create_win32_surface,
 #elif defined(OS_RPI)
         //create_wfc,
@@ -72,7 +79,7 @@ public:
     void* native_handle = nullptr;
     std::function<void(void*)> handle_cb = nullptr;
     std::function<void()> cb = nullptr;
-    BlockingQueue<PlatformSurface::Event> events;
+    BlockingQueue<PlatformSurface::Event> events; // TODO: lock free fifo
 };
 
 PlatformSurface::PlatformSurface()
