@@ -3,7 +3,6 @@
  */
 #include "ugs/PlatformSurface.h"
 #include "base/BlockingQueue.h"
-#include <chrono>
 #ifdef WINAPI_FAMILY
 # include <winapifamily.h>
 # if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -144,24 +143,10 @@ void PlatformSurface::close()
     d->closed = true;
 }
 
-bool PlatformSurface::popEvent(Event &e, int64_t timeout)
+bool PlatformSurface::popEvent(Event &e)
 {
-    using namespace std::chrono;
-    if (d->events.size() == 0) {
-        processEvents();
-        if (timeout <= 0)
-            return false;
-    }
-    auto t0 = steady_clock::now();
-    while (true) {
-        if (d->events.tryPop(e, 1) > 0)
-            return true;
-        processEvents();
-        // if timeout is 0, dt always <0
-        if (timeout - duration_cast<milliseconds>(steady_clock::now() - t0).count() < -1)
-            break;
-    }
-    return false;
+    processEvents();
+    return d->events.tryPop(e) > 0;
 }
 
 void PlatformSurface::pushEvent(const Event &e)

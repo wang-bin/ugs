@@ -169,7 +169,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         return surface;
     activateRenderContext(surface, ctx);
     PlatformSurface::Event e{};
-    while (surface->popEvent(e, 0)) { // do no always try pop
+    while (surface->popEvent(e)) { // do no always try pop
         if (e.type == PlatformSurface::Event::Close) {
             std::clog << surface << "->PlatformSurface::Event::Close" << std::endl;
             if (d->ctx_destroy_cb)

@@ -75,7 +75,7 @@ public:
      * \brief popEvent
      * \return false if no event
      */
-    bool popEvent(Event& e, int64_t timeout = (std::numeric_limits<int64_t>::max)());
+    bool popEvent(Event& e);
 protected:
     // call in your ctor if want to observe the changes. the callback is called resetNativeHandle() parameter is a different handle.
     // can not use virtual method in resetNativeHandle() because it may be called in ctor
@@ -86,7 +86,7 @@ protected:
 private:
     void pushEvent(const Event& e);
     class Private;
-    Private* d;
+    Private* d; // TODO: unique_ptr
 };
 
 UGS_NS_END
