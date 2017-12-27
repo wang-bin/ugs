@@ -143,6 +143,8 @@ void PlatformSurface::close()
 
 bool PlatformSurface::popEvent(Event &e)
 {
+    // SPSC is enough if events are generated in consumer thread(Produce/Consume is ordered) and at most 1 another thread
+    // but processEvents() is also called in RenderLoop.waitForStopped(), so MPSC is require
     processEvents();
     return d->events.pop(&e) > 0;
 }

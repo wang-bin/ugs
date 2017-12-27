@@ -8,6 +8,7 @@
 template<typename T>
 class mpsc_fifo {
 public:
+    mpsc_fifo() { tail_.store(head_); }
     ~mpsc_fifo() {
         while (node* h = head_) {
             head_ = h->next.load();
@@ -44,6 +45,6 @@ private:
         T v;
     };
     node *head_ = new node(); // pop_at_
-    std::atomic<node*> tail_{head_}; // push_at_
+    std::atomic<node*> tail_; // push_at_ // can not use tail_{head_} because atomic ctor with desired value MUST be constexpr (error in g++4.8)
 };
 
