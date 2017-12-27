@@ -84,7 +84,7 @@ protected:
 
     PlatformSurface();
 private:
-    void pushEvent(const Event& e);
+    void pushEvent(Event&& e);
     class Private;
     Private* d; // TODO: unique_ptr
 };

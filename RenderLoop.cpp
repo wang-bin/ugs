@@ -102,7 +102,7 @@ void RenderLoop::waitForStopped()
             unique_lock<mutex> lock(d->mtx);
             // surfaces.erase() on close
             for (auto sp : d->surfaces) {
-                sp->surface->processEvents();
+                sp->surface->processEvents(); // MPSC
             }
         }
         this_thread::sleep_for(chrono::milliseconds(10));

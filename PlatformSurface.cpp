@@ -2,7 +2,7 @@
  * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
-#include "base/BlockingQueue.h"
+#include "base/mpsc_fifo.h"
 #ifdef WINAPI_FAMILY
 # include <winapifamily.h>
 # if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -78,7 +78,7 @@ public:
     void* native_handle = nullptr;
     std::function<void(void*)> handle_cb = nullptr;
     std::function<void()> cb = nullptr;
-    BlockingQueue<PlatformSurface::Event> events; // TODO: lock free fifo
+    mpsc_fifo<PlatformSurface::Event> events;
 };
 
 PlatformSurface::PlatformSurface()
@@ -104,7 +104,7 @@ void PlatformSurface::resetNativeHandle(void* handle)
     e.type = Event::NativeHandle;
     e.handle.before = old;
     e.handle.after = handle;
-    pushEvent(e);
+    pushEvent(std::move(e));
     if (!handle)
         return;
     int w = 0, h = 0;
@@ -132,28 +132,26 @@ void PlatformSurface::resize(int w, int h)
     Event e;
     e.type = Event::Resize;
     e.size = {w, h};
-    pushEvent(e);
+    pushEvent(std::move(e));
 }
 
 void PlatformSurface::close()
 {
-    Event e;
-    e.type = Event::Close;
-    pushEvent(e);
+    pushEvent(Event{Event::Close});
     d->closed = true;
 }
 
 bool PlatformSurface::popEvent(Event &e)
 {
     processEvents();
-    return d->events.tryPop(e) > 0;
+    return d->events.pop(&e) > 0;
 }
 
-void PlatformSurface::pushEvent(const Event &e)
+void PlatformSurface::pushEvent(Event&& e)
 {
     if (d->closed) // no pendding events for closed surface
         return;
-    d->events.push(e);
+    d->events.push(std::move(e));
     // TODO: user listeners
     if (d->cb)
         d->cb();
