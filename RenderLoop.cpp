@@ -183,9 +183,11 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
     while (surface->popEvent(e)) { // do no always try pop
         if (e.type == PlatformSurface::Event::Close) {
             std::clog << surface << "->PlatformSurface::Event::Close" << std::endl;
-            if (d->ctx_destroy_cb)
-                d->ctx_destroy_cb(surface, ctx);
-            destroyRenderContext(surface, ctx);
+            if (ctx) {
+                if (d->ctx_destroy_cb)
+                    d->ctx_destroy_cb(surface, ctx);
+                destroyRenderContext(surface, ctx);
+            }
             if (d->close_cb)
                 d->close_cb(surface);
             surface->release();
@@ -207,7 +209,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
             std::clog << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
-            if (e.handle.before) {
+            if (e.handle.before && ctx) {
                 if (d->ctx_destroy_cb)
                     d->ctx_destroy_cb(surface, ctx);
                 destroyRenderContext(surface, ctx);
