@@ -2,10 +2,13 @@
  * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
  * MIT License
  * Lock Free MPSC FIFO
- * https://github.com/wang-bin/lock_free
+ * https://github.com/wang-bin/lockless
  */
+#pragma once
 #include <atomic>
 #include <utility>
+
+#define MPSC_FIFO_RAW_NEXT_PTR 0
 
 template<typename T>
 class mpsc_fifo {
@@ -13,37 +16,55 @@ public:
     mpsc_fifo() { in_.store(out_); }
 
     ~mpsc_fifo() {
-        while (node* h = out_) {
-            out_ = h->next.load();
-            delete h;
-        }
+        clear();
+        delete out_;
     }
 
-    void clear() { while(pop()) {}} // in consumer thread
+    // return number of element cleared
+    int clear() {
+        int n = 0;
+        while (pop())
+            n++;
+        return n;
+    } // in consumer thread
 
     template<typename... Args>
-    void push(Args&&... args) {
-        push({std::forward<Args>(args)...});
+    void emplace(Args&&... args) {
+        node *n = new node{std::forward<Args>(args)...};
+#if MPSC_FIFO_RAW_NEXT_PTR // slower
+        node* t = in_.load(std::memory_order_relaxed);
+        do {
+            t->next = n;
+        } while (!in_.compare_exchange_weak(t, n, std::memory_order_acq_rel, std::memory_order_relaxed));
+#else
+        node* t = in_.exchange(n, std::memory_order_acq_rel);
+        t->next.store(n, std::memory_order_release);
+#endif
     }
 
     void push(T&& v) {
         node *n = new node{std::move(v)};
-#if 0
+#if MPSC_FIFO_RAW_NEXT_PTR // slower
         node* t = in_.load(std::memory_order_relaxed);
-        while (!in_.compare_exchange_weak(t, n, std::memory_order_acq_rel, std::memory_order_relaxed)) {}
+        do {
+            t->next = n;
+        } while (!in_.compare_exchange_weak(t, n, std::memory_order_acq_rel, std::memory_order_relaxed));
 #else
         node* t = in_.exchange(n, std::memory_order_acq_rel);
-#endif
-     
         t->next.store(n, std::memory_order_release);
+#endif
     }
 
     bool pop(T* v = nullptr) {
         // will check next.load() later, also next.store() in push() must be after exchange, so relaxed is enough
-        if (out_ == in_.load(std::memory_order_relaxed)) //if (!head->next) // not completely write to head->next (tail->next), next is not null but invalid
+        if (out_ == in_.load(std::memory_order_relaxed)) //if (!out_->next) // not completely write to out_->next (t->next.store()), next is not null but invalid
             return false;
+#if MPSC_FIFO_RAW_NEXT_PTR
+        node *n = out_->next;
+#else
         node *n = out_->next.load(std::memory_order_relaxed);
-        if (!n)
+#endif
+        if (!n) // before t->next.store() after in_.exchange() in push()
             return false;
         if (v)
             *v = std::move(n->v);
@@ -54,7 +75,11 @@ public:
 private:
     struct node {
         T v;
+#if MPSC_FIFO_RAW_NEXT_PTR
+        node* next;
+#else
         std::atomic<node*> next;
+#endif
     };
 
     node *out_ = new node();
