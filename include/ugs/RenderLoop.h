@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
  */
 #pragma once
 #include "export.h"
@@ -32,11 +32,15 @@ public:
     // takes the ownership. but surface ptr can be accessed before close. To remove surface, call surface->close()
     std::weak_ptr<PlatformSurface> add(PlatformSurface* surface);
     /// the following functions are called in rendering thread
-    void onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
-    void onDraw(std::function<bool(PlatformSurface*)> cb);
-    // resetNativeHandle(nullptr)=>close()
-    void onDestroyContext(std::function<void(PlatformSurface*)> cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
-    void onClose(std::function<void(PlatformSurface*)> cb); // called when surface is about to be destroyed
+    RenderLoop& onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
+    RenderLoop& onDraw(std::function<bool(PlatformSurface*)> cb);
+    using RenderContext = void*;
+    // callback after context is created
+    RenderLoop& onContextCreated(std::function<void(PlatformSurface*, void*)> cb);
+    // callback before destroying context. For example, happens when resetNativeHandle(nullptr)=>close()
+    RenderLoop& onDestroyContext(std::function<void(PlatformSurface*, void*)> cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
+    // callback before surface close after context is destroyed
+    RenderLoop& onClose(std::function<void(PlatformSurface*)> cb); // called when surface is about to be destroyed
 protected:
     virtual void* createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx) = 0;

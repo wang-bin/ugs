@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/RenderLoop.h"
 #include "ugs/PlatformSurface.h"
@@ -52,7 +52,8 @@ public:
     function<void(PlatformSurface*,int,int)> resize_cb = nullptr;
     function<bool(PlatformSurface*)> draw_cb = nullptr;
     function<void(PlatformSurface*)> close_cb = nullptr;
-    function<void(PlatformSurface*)> ctx_destroy_cb = nullptr;
+    function<void(PlatformSurface*,void*)> ctx_created_cb = nullptr;
+    function<void(PlatformSurface*,void*)> ctx_destroy_cb = nullptr;
     BlockingQueue<function<void()>> tasks;
 };
 
@@ -125,24 +126,34 @@ void RenderLoop::update()
     });
 }
 
-void RenderLoop::onResize(function<void(PlatformSurface*,int,int)> cb)
+RenderLoop& RenderLoop::onResize(function<void(PlatformSurface*,int,int)> cb)
 {
     d->resize_cb = cb;
+    return *this;
 }
 
-void RenderLoop::onDraw(function<bool(PlatformSurface*)> cb)
+RenderLoop& RenderLoop::onDraw(function<bool(PlatformSurface*)> cb)
 {
     d->draw_cb = cb;
+    return *this;
 }
 
-void RenderLoop::onDestroyContext(function<void(PlatformSurface*)> cb)
+RenderLoop& RenderLoop::onContextCreated(function<void(PlatformSurface*,void*)> cb)
+{
+    d->ctx_created_cb = cb;
+    return *this;
+}
+
+RenderLoop& RenderLoop::onDestroyContext(function<void(PlatformSurface*,void*)> cb)
 {
     d->ctx_destroy_cb = cb;
+    return *this;
 }
 
-void RenderLoop::onClose(function<void(PlatformSurface*)> cb)
+RenderLoop& RenderLoop::onClose(function<void(PlatformSurface*)> cb)
 {
     d->close_cb = cb;
+    return *this;
 }
 
 weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
@@ -173,10 +184,10 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         if (e.type == PlatformSurface::Event::Close) {
             std::clog << surface << "->PlatformSurface::Event::Close" << std::endl;
             if (d->ctx_destroy_cb)
-                d->ctx_destroy_cb(surface);
-            if (d->close_cb) // TODO: after destroyRenderContext()
-                d->close_cb(surface);
+                d->ctx_destroy_cb(surface, ctx);
             destroyRenderContext(surface, ctx);
+            if (d->close_cb)
+                d->close_cb(surface);
             surface->release();
             auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             unique_lock<mutex> lock(d->mtx);
@@ -198,7 +209,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             std::clog << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
             if (e.handle.before) {
                 if (d->ctx_destroy_cb)
-                    d->ctx_destroy_cb(surface);
+                    d->ctx_destroy_cb(surface, ctx);
                 destroyRenderContext(surface, ctx);
             }
             sp->ctx = nullptr;
@@ -210,6 +221,8 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
                 std::clog << "ERROR! Failed to create rendering context! platform surface handle: " << surface->nativeHandle() << std::endl;
                 return surface; // already release(). FIXME
             }
+            if (d->ctx_created_cb)
+                d->ctx_created_cb(surface, ctx);
             sp->ctx = ctx;
             surface->setEventCallback([=]{ // TODO: void(Event e)
                 d->schedule([=]{
