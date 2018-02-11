@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -37,7 +37,7 @@ public:
     void run() {
         running = true;
         std::clog << this << " start RenderLoop" << std::endl;
-        while (true) {
+        while (true) { // TODO: lock free? semaphore?
             function<void()> task;
             tasks.pop(task);
             if (task)
@@ -51,6 +51,7 @@ public:
     bool use_thread = true;
     bool stop_requested = false;
     bool running = false;
+    bool stop_on_last_close = true;
     mutex mtx;
     thread render_thread;
 
@@ -60,7 +61,7 @@ public:
     function<void(PlatformSurface*)> close_cb = nullptr;
     function<void(PlatformSurface*,void*)> ctx_created_cb = nullptr;
     function<void(PlatformSurface*,void*)> ctx_destroy_cb = nullptr;
-    BlockingQueue<function<void()>> tasks;
+    BlockingQueue<function<void()>> tasks; // TODO: unbounded_blocking_fifo w/ or w/o semaphore (depending on on draw call cost(profile))
 };
 
 RenderLoop::RenderLoop()
@@ -74,11 +75,12 @@ RenderLoop::~RenderLoop()
     delete d;
 }
 
-bool RenderLoop::start()
+bool RenderLoop::start(bool stop_on_last_surface_closed)
 {
     if (d->running)
         return true;
     d->running = true;
+    d->stop_on_last_close = stop_on_last_surface_closed;
     if (d->use_thread) { // check joinable?
         d->render_thread = std::thread([this]{
             std::clog << "Rendering thread @" << std::this_thread::get_id() << std::endl;
@@ -107,12 +109,14 @@ void RenderLoop::waitForStopped()
     while (d->running) {
         {
             unique_lock<mutex> lock(d->mtx);
-            // surfaces.erase() on close
+            // surfaces.erase() on close.
+            // TODO: lock free, schedule a task so in the same thread as ease(still has mutext in task queue)? main thread?
+            // cow?
             for (auto sp : d->surfaces) {
                 sp->surface->processEvents(); // MPSC
             }
         }
-        this_thread::sleep_for(chrono::milliseconds(10));
+        this_thread::sleep_for(chrono::milliseconds(10)); // TODO: poll native events?
     }
     if (d->render_thread.joinable())
         d->render_thread.join();
@@ -186,7 +190,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         return surface;
     activateRenderContext(surface, ctx);
     PlatformSurface::Event e{};
-    while (surface->popEvent(e)) { // do no always try pop
+    while (surface->popEvent(e)) {
         if (e.type == PlatformSurface::Event::Close) {
             std::clog << surface << "->PlatformSurface::Event::Close" << std::endl;
             if (ctx) {
@@ -202,6 +206,8 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             clog << "removing closed surface..." << endl;
             d->surfaces.erase(it);
             delete sp;
+            if (d->stop_on_last_close && d->surfaces.empty())
+                d->stop_requested = true;
             return nullptr; // FIXME
         } else if (e.type == PlatformSurface::Event::Resize) {
             std::clog << "PlatformSurface::Event::Resize" << std::endl;

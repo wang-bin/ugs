@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,7 +19,7 @@ class UGS_API RenderLoop
 public:
     RenderLoop();
     virtual ~RenderLoop();
-    bool start(); // start render loop if surface is ready
+    bool start(bool stop_on_last_surface_closed = true); // start render loop if surface is ready
     // close all surfaces, invoke onClose() callbacks, destroy gfx contexts and surfaces, then exit render loop
     void stop();
     /// MUST call stop() && waitForStopped() manually before destroying RenderLoop
