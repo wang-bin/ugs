@@ -104,7 +104,7 @@ endif()
 
 #########################################################################################################
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-option(UGS_RELOCATABLE "Build ${PROJECT_NAME} as a relocatable object instead of a shared library" OFF)
+option(UGS_RELOCATABLE "[iOS] Build ${PROJECT_NAME} as a relocatable object instead of a shared library" ON)
 
 set(EXTRA_CFLAGS)
 set(SDK_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -186,14 +186,16 @@ target_include_directories(${TARGET_NAME}-static
 )
 
 set_target_properties(${TARGET_NAME}-shared PROPERTIES
-    RELOCATABLE ${UGS_RELOCATABLE} # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
     MACOSX_RPATH ON
     FRAMEWORK ON
     VERSION ${PROJECT_VERSION}
     SOVERSION ${SO_VERSION}
     OUTPUT_NAME ${TARGET_NAME}
     CLEAN_DIRECT_OUTPUT 1
-    )
+)
+if(UGS_RELOCATABLE AND IOS AND NOT IOS_EMBEDDED_FRAMEWORK)
+  set_target_properties(${TARGET_NAME}-shared PROPERTIES RELOCATABLE ON) # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
+endif()
 set_relocatable_flags(${TARGET_NAME}-shared)
 if(APPLE)
   add_custom_command(TARGET ${TARGET_NAME}-shared POST_BUILD
