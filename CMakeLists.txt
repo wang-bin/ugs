@@ -1,3 +1,4 @@
+# targets: ugs(shared or reloc obj), ugs-static, ugs-static-dydep
 if(NOT DEFINED UGS_PROJECT_NAME)
   set(UGS_PROJECT_NAME ugs)
 else()
@@ -64,7 +65,14 @@ if(USE_TSAN AND NOT MSVC)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=thread")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
-
+if(APPLE)
+  if(IOS)
+    #set_xcode_property(myioslib IPHONEOS_DEPLOYMENT_TARGET "8.0")
+  else()
+    list(APPEND EXTRA_INCLUDE /usr/local/include) #macOS only
+    list(APPEND EXTRA_LIB_DIR /usr/local/lib)
+  endif()
+endif()
 if(EXISTS ${${PROJECT_NAME}_SOURCE_DIR}/include)
   include_directories(${${PROJECT_NAME}_SOURCE_DIR}/include)
 endif()
@@ -104,7 +112,12 @@ endif()
 
 #########################################################################################################
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-option(UGS_RELOCATABLE "[iOS] Build ${PROJECT_NAME} as a relocatable object instead of a shared library" ON)
+if(IOS AND NOT IOS_EMBEDDED_FRAMEWORK)
+  set(UGS_RELOCATABLE_DEFAULT ON)
+else()
+  set(UGS_RELOCATABLE_DEFAULT OFF)
+endif()
+option(UGS_RELOCATABLE "Build ${PROJECT_NAME} as a relocatable object instead of a shared library" ${UGS_RELOCATABLE_DEFAULT})
 
 set(EXTRA_CFLAGS)
 set(SDK_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -119,7 +132,7 @@ if(WIN32)
 endif()
 if(ANDROID)
   list(APPEND SRC AndroidSurface.cpp base/jmi/jmi.cpp)
-  list(APPEND EXTRA_LIBS android log)
+  list(APPEND EXTRA_DYLIBS android log)
 endif()
 if(IOS)
   list(APPEND SRC UIKitSurface.mm)
@@ -128,7 +141,7 @@ endif()
 if(RPI)
   list(APPEND SRC RPiSurface.cpp)
   set_source_files_properties(RPiSurface.cpp PROPERTIES COMPILE_FLAGS -I${RPI_VC_DIR}/include)
-  list(APPEND EXTRA_LIBS -L${RPI_VC_DIR}/lib bcm_host)
+  list(APPEND EXTRA_DYLIBS -L${RPI_VC_DIR}/lib bcm_host)
 endif()
 include(FindX11)
 if(X11_FOUND)
@@ -148,7 +161,7 @@ if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND)
   list(APPEND SRC WaylandSurface.cpp WaylandEGLSurface.cpp)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_WAYLAND=1")
   list(APPEND EXTRA_INCLUDE ${WAYLAND_CLIENT_INCLUDE_DIR} ${WAYLAND_EGL_INCLUDE_DIR})
-  list(APPEND EXTRA_LIBS ${WAYLAND_CLIENT_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
+  list(APPEND EXTRA_DYLIBS ${WAYLAND_CLIENT_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
 endif()
 
 find_package(PkgConfig)
@@ -159,17 +172,24 @@ if(PKG_GBM_FOUND AND PKG_LIBDRM_FOUND)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_GBM=1")
   list(APPEND SRC GBMSurface.cpp)
   set_source_files_properties(GBMSurface.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_GBM=1 ${PKG_GBM_CFLAGS} ${PKG_LIBDRM_CFLAGS}")
-  list(APPEND EXTRA_LIBS ${PKG_GBM_LIBRARIES} ${PKG_LIBDRM_LIBRARIES})
+  list(APPEND EXTRA_DYLIBS ${PKG_GBM_LIBRARIES} ${PKG_LIBDRM_LIBRARIES})
 endif()
 
 if(EXTRA_CFLAGS)
   set_source_files_properties(PlatformSurface.cpp PROPERTIES COMPILE_FLAGS ${EXTRA_CFLAGS})
 endif()
 
-add_library(${TARGET_NAME}-shared SHARED ${SRC})
+add_library(${TARGET_NAME} SHARED ${SRC})
 add_library(${TARGET_NAME}-static STATIC ${SRC})
-target_compile_definitions(${TARGET_NAME}-shared PRIVATE BUILD_UGS_LIB)
+set_rpath() # not reloc obj
+exclude_libs_all(${TARGET_NAME})
+
+target_compile_definitions(${TARGET_NAME} PRIVATE BUILD_UGS_LIB)
 target_compile_definitions(${TARGET_NAME}-static PRIVATE BUILD_UGS_STATIC)
+CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
+if(HAVE_LIBDL)
+  list(APPEND EXTRA_DYLIBS dl)
+endif()
 
 if(EXTRA_INCLUDE)
   list(REMOVE_DUPLICATES EXTRA_INCLUDE)
@@ -178,81 +198,66 @@ if(EXTRA_LIB_DIR)
   list(REMOVE_DUPLICATES EXTRA_LIB_DIR)
 endif()
 
-target_include_directories(${TARGET_NAME}-shared
+target_include_directories(${TARGET_NAME}
   PRIVATE ${EXTRA_INCLUDE}
 )
 target_include_directories(${TARGET_NAME}-static
   PRIVATE ${EXTRA_INCLUDE}
 )
 
-set_target_properties(${TARGET_NAME}-shared PROPERTIES
+set_target_properties(${TARGET_NAME} PROPERTIES
     MACOSX_RPATH ON
     FRAMEWORK ON
+    RELOCATABLE ${UGS_RELOCATABLE} # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
     VERSION ${PROJECT_VERSION}
     SOVERSION ${SO_VERSION}
     OUTPUT_NAME ${TARGET_NAME}
     CLEAN_DIRECT_OUTPUT 1
 )
-if(UGS_RELOCATABLE AND IOS AND NOT IOS_EMBEDDED_FRAMEWORK)
-  set_target_properties(${TARGET_NAME}-shared PROPERTIES RELOCATABLE ON) # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
-endif()
-set_relocatable_flags(${TARGET_NAME}-shared)
+set_relocatable_flags(${TARGET_NAME})
 if(APPLE)
-  add_custom_command(TARGET ${TARGET_NAME}-shared POST_BUILD
+  add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory Headers
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${SDK_HEADERS_DIR}/${TARGET_NAME}/ Headers
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.framework
     )
 endif()
 
-set(LINK_TO_SHARED 1) # only dso needs to link to shared libs, static libs need nothing, relocatable objects only need to link to static libs
-if(UGS_RELOCATABLE)
-  set(LINK_TO_SHARED 0)
-else()
-  set_rpath()
-endif()
-exclude_libs_all(${TARGET_NAME}-shared)
-
 if(APPLE)
   if(IOS)
     if(NOT IOS_EMBEDDED_FRAMEWORK)
-      set(LINK_TO_SHARED 0)
       # unexport completely including asm symbols
       #file(WRITE ${CMAKE_BINARY_DIR}/.unexport.list "*ContextEAGL*\n*egl*\n")
-      #target_link_libraries(${TARGET_NAME}-shared PRIVATE -Wl,-unexported_symbols_list,${CMAKE_BINARY_DIR}/.unexport.list)
+      #target_link_libraries(${TARGET_NAME} PRIVATE -Wl,-unexported_symbols_list,${CMAKE_BINARY_DIR}/.unexport.list)
     endif()
   else()
     # macOS only
-    list(APPEND EXTRA_LIB_DIR /usr/local/lib)
     #list(APPEND EXTRA_DYLIBS "-framework VideoDecodeAcceleration" "-framework IOSurface")
     if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 10.7) # check host os?
-      add_custom_command(TARGET ${TARGET_NAME}-shared POST_BUILD
-        COMMAND install_name_tool -change /usr/lib/libc++.1.dylib @rpath/libc++.1.dylib $<TARGET_FILE:${TARGET_NAME}-shared>
+      add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        COMMAND install_name_tool -change /usr/lib/libc++.1.dylib @rpath/libc++.1.dylib $<TARGET_FILE:${TARGET_NAME}>
       )
     endif()
   endif()
 endif()
-if(LINK_TO_SHARED)
-  CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
-  if(HAVE_LIBDL)
-    list(APPEND EXTRA_DYLIBS dl)
-  endif()
-  list(APPEND EXTRA_LIBS "${EXTRA_DYLIBS}")
-endif()
+
 if(EXTRA_DYLIBS)
   list(REMOVE_DUPLICATES EXTRA_DYLIBS)
 endif()
 if(EXTRA_LIBS)
   list(REMOVE_DUPLICATES EXTRA_LIBS)
 endif()
-set_target_properties(${TARGET_NAME}-shared PROPERTIES libs "${EXTRA_DYLIBS}")
-set_target_properties(${TARGET_NAME}-static PROPERTIES libs "${EXTRA_LIBS}")
+add_library(${TARGET_NAME}-static-dydep INTERFACE)
+target_link_libraries(${TARGET_NAME}-static-dydep INTERFACE ${EXTRA_DYLIBS})
 
-target_link_libraries(${TARGET_NAME}-shared LINK_PRIVATE ${EXTRA_LIBS}) 
-target_link_libraries(${TARGET_NAME}-static LINK_PUBLIC  ${EXTRA_LIBS})
+target_link_libraries(${TARGET_NAME} LINK_PRIVATE ${EXTRA_LIBS}) # only static libs are enough for reloc obj targets, otherwise static + shared
+if(NOT UGS_RELOCATABLE)
+  target_link_libraries(${TARGET_NAME} LINK_PRIVATE ${TARGET_NAME}-static-dydep)
+endif()
+target_link_libraries(${TARGET_NAME}-static LINK_PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
 
 install(DIRECTORY ${SDK_HEADERS_DIR} DESTINATION include/)
-install(TARGETS ${PROJECT_NAME}-shared ${PROJECT_NAME}-static
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}-static
   EXPORT ${PROJECT_NAME}-targets
   #PUBLIC_HEADER DESTINATION ${PROJECT_NAME}
   RUNTIME DESTINATION bin
@@ -264,4 +269,3 @@ install(EXPORT ${PROJECT_NAME}-targets
   DESTINATION lib/cmake/${PROJECT_NAME}
   FILE ${PROJECT_NAME}-config.cmake
 )
-
