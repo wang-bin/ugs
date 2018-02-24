@@ -20,95 +20,18 @@ set(TARGET_NAME ${PROJECT_NAME})
 set(SO_VERSION ${VERSION_MAJOR})
 cmake_minimum_required(VERSION 2.8)
 
-if(POLICY CMP0022) # since 2.8.12. link_libraries()
-  cmake_policy(SET CMP0022 NEW)
-endif()
 # reset var inherited from parent
 set(EXTRA_LIBS)
 set(EXTRA_DYLIBS)
 set(EXTRA_LIB_DIR)
-set(EXTRA_INCLUDE)
 
-include(CheckCXXCompilerFlag)
-include(CheckLibraryExists)
-include(CheckIncludeFiles)
-include(CheckIncludeFile)
-include(CheckCSourceCompiles)
 # https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/ (global and specified target)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-if(CMAKE_VERSION VERSION_LESS 3.1)
-  if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-std=c++11)
-  endif()
-endif()
-if(POLICY CMP0063) # visibility. since 3.3
-  cmake_policy(SET CMP0063 NEW)
-endif()
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 #SET(CMAKE_VERBOSE_MAKEFILE ON)
-
-#find_package(Git)
 #list(APPEND CMAKE_MODULE_PATH cmake)
-include(cmake/tools/tools.cmake)
-#check_cxx_compiler_flag(-fno-rtti HAVE_NO_RTTI)
-if(MSVC)
-  add_compile_options(-D_CRT_SECURE_NO_WARNINGS) #-GR- warning
-else()
-  add_compile_options(-fno-rtti -fno-exceptions)
-endif()
-if(USE_TSAN AND NOT MSVC)
-  add_compile_options(-fsanitize=thread)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=thread")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
-endif()
-if(APPLE)
-  if(IOS)
-    #set_xcode_property(myioslib IPHONEOS_DEPLOYMENT_TARGET "8.0")
-  else()
-    list(APPEND EXTRA_INCLUDE /usr/local/include) #macOS only
-    list(APPEND EXTRA_LIB_DIR /usr/local/lib)
-  endif()
-endif()
-if(EXISTS ${${PROJECT_NAME}_SOURCE_DIR}/include)
-  include_directories(${${PROJECT_NAME}_SOURCE_DIR}/include)
-endif()
-if(RPI)
-  list(APPEND EXTRA_INCLUDE ${RPI_VC_DIR}/include)
-endif()
-if(EXISTS ${${PROJECT_NAME}_SOURCE_DIR}/external/lib/${OS}/${ARCH})
-  list(APPEND EXTRA_LIB_DIR "${${PROJECT_NAME}_SOURCE_DIR}/external/lib/${OS}/${ARCH}")
-endif()
-if(EXISTS ${CMAKE_SOURCE_DIR}/external/lib/${OS}/${ARCH})
-  list(APPEND EXTRA_LIB_DIR "${CMAKE_SOURCE_DIR}/external/lib/${OS}/${ARCH}")
-endif()
-if(EXISTS ${${PROJECT_NAME}_SOURCE_DIR}/external/include)
-  list(APPEND EXTRA_INCLUDE ${${PROJECT_NAME}_SOURCE_DIR}/external/include)
-endif()
-if(EXISTS ${CMAKE_SOURCE_DIR}/external/include)
-  list(APPEND EXTRA_INCLUDE ${CMAKE_SOURCE_DIR}/external/include)
-endif()
-if(APPLE)
-    if(IOS)
-      #set_xcode_property(myioslib IPHONEOS_DEPLOYMENT_TARGET "8.0")
-    else()
-      list(APPEND EXTRA_INCLUDE /usr/local/include) #macOS only
-    endif()
-endif()
-if(EXISTS ${${PROJECT_NAME}_SOURCE_DIR}/base/capi/capi.h)
-    set(HAVE_CAPI 1)
-    list(APPEND EXTRA_INCLUDE ${${PROJECT_NAME}_SOURCE_DIR}/base/capi) # TODO: only files use capi.h
-endif()
-if(WIN32)
-  if(CMAKE_C_COMPILER_ID STREQUAL "GNU") # TODO: option STATIC_LIBGCC?
-    #link_libraries(-static-libgcc) cmake2.8 CMP0022
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc")
-  endif()
-endif()
+include(cmake/tools/tools.cmake NO_POLICY_SCOPE)
 
 #########################################################################################################
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -119,8 +42,14 @@ else()
 endif()
 option(UGS_RELOCATABLE "Build ${PROJECT_NAME} as a relocatable object instead of a shared library" ${UGS_RELOCATABLE_DEFAULT})
 
+if(EXISTS ${PROJECT_SOURCE_DIR}/include)
+  include_directories(${PROJECT_SOURCE_DIR}/include) # should not affect sub-projects
+endif()
+
 set(EXTRA_CFLAGS)
 set(SDK_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+file(GLOB SDK_HEADERS LIST_DIRECTORIES false  ${SDK_HEADERS_DIR}/${PROJECT_NAME}/*.h)
+
 set(SRC
     PlatformSurface.cpp
     RenderLoop.cpp
@@ -160,7 +89,7 @@ if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND)
   set(HAVE_WAYLAND 1)
   list(APPEND SRC WaylandSurface.cpp WaylandEGLSurface.cpp)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_WAYLAND=1")
-  list(APPEND EXTRA_INCLUDE ${WAYLAND_CLIENT_INCLUDE_DIR} ${WAYLAND_EGL_INCLUDE_DIR})
+  include_directories(${WAYLAND_CLIENT_INCLUDE_DIR} ${WAYLAND_EGL_INCLUDE_DIR})
   list(APPEND EXTRA_DYLIBS ${WAYLAND_CLIENT_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
 endif()
 
@@ -179,31 +108,22 @@ if(EXTRA_CFLAGS)
   set_source_files_properties(PlatformSurface.cpp PROPERTIES COMPILE_FLAGS ${EXTRA_CFLAGS})
 endif()
 
-add_library(${TARGET_NAME} SHARED ${SRC})
-add_library(${TARGET_NAME}-static STATIC ${SRC})
-set_rpath() # not reloc obj
-exclude_libs_all(${TARGET_NAME})
+add_library(${TARGET_NAME}-objs OBJECT ${SRC})
+add_library(${TARGET_NAME}-static-objs OBJECT ${SRC})
+add_library(${TARGET_NAME} SHARED $<TARGET_OBJECTS:${TARGET_NAME}-objs>)
+add_library(${TARGET_NAME}-static STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
+add_library(${TARGET_NAME}-relocobj STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
 
-target_compile_definitions(${TARGET_NAME} PRIVATE BUILD_UGS_LIB)
-target_compile_definitions(${TARGET_NAME}-static PRIVATE BUILD_UGS_STATIC)
+target_compile_definitions(${TARGET_NAME}-objs PRIVATE BUILD_UGS_LIB)
+target_compile_definitions(${TARGET_NAME}-static-objs PRIVATE BUILD_UGS_STATIC)
 CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
 if(HAVE_LIBDL)
   list(APPEND EXTRA_DYLIBS dl)
 endif()
 
-if(EXTRA_INCLUDE)
-  list(REMOVE_DUPLICATES EXTRA_INCLUDE)
-endif()
 if(EXTRA_LIB_DIR)
   list(REMOVE_DUPLICATES EXTRA_LIB_DIR)
 endif()
-
-target_include_directories(${TARGET_NAME}
-  PRIVATE ${EXTRA_INCLUDE}
-)
-target_include_directories(${TARGET_NAME}-static
-  PRIVATE ${EXTRA_INCLUDE}
-)
 
 set_target_properties(${TARGET_NAME} PROPERTIES
     MACOSX_RPATH ON
@@ -215,31 +135,9 @@ set_target_properties(${TARGET_NAME} PROPERTIES
     CLEAN_DIRECT_OUTPUT 1
 )
 set_relocatable_flags(${TARGET_NAME})
-if(APPLE)
-  add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory Headers
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SDK_HEADERS_DIR}/${TARGET_NAME}/ Headers
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.framework
-    )
-endif()
-
-if(APPLE)
-  if(IOS)
-    if(NOT IOS_EMBEDDED_FRAMEWORK)
-      # unexport completely including asm symbols
-      #file(WRITE ${CMAKE_BINARY_DIR}/.unexport.list "*ContextEAGL*\n*egl*\n")
-      #target_link_libraries(${TARGET_NAME} PRIVATE -Wl,-unexported_symbols_list,${CMAKE_BINARY_DIR}/.unexport.list)
-    endif()
-  else()
-    # macOS only
-    #list(APPEND EXTRA_DYLIBS "-framework VideoDecodeAcceleration" "-framework IOSurface")
-    if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 10.7) # check host os?
-      add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-        COMMAND install_name_tool -change /usr/lib/libc++.1.dylib @rpath/libc++.1.dylib $<TARGET_FILE:${TARGET_NAME}>
-      )
-    endif()
-  endif()
-endif()
+set_rpath() # not reloc obj
+exclude_libs_all(${TARGET_NAME})
+mkdsym(${TARGET_NAME})  # MUST after VERSION set because VERSION is used un mkdsym for cmake <3.0
 
 if(EXTRA_DYLIBS)
   list(REMOVE_DUPLICATES EXTRA_DYLIBS)
@@ -247,25 +145,15 @@ endif()
 if(EXTRA_LIBS)
   list(REMOVE_DUPLICATES EXTRA_LIBS)
 endif()
-add_library(${TARGET_NAME}-static-dydep INTERFACE)
-target_link_libraries(${TARGET_NAME}-static-dydep INTERFACE ${EXTRA_DYLIBS})
+#add_library(${TARGET_NAME}-static-dydep INTERFACE) # interface lib is not supported by cmake 2.x
+#target_link_libraries(${TARGET_NAME}-static-dydep INTERFACE ${EXTRA_DYLIBS})
 
-target_link_libraries(${TARGET_NAME} LINK_PRIVATE ${EXTRA_LIBS}) # only static libs are enough for reloc obj targets, otherwise static + shared
+target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_LIBS}) # only static libs are enough for reloc obj targets, otherwise static + shared
 if(NOT UGS_RELOCATABLE)
-  target_link_libraries(${TARGET_NAME} LINK_PRIVATE ${TARGET_NAME}-static-dydep)
+  target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_DYLIBS})
 endif()
-target_link_libraries(${TARGET_NAME}-static LINK_PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
+target_link_libraries(${TARGET_NAME}-static PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS})
+target_link_libraries(${TARGET_NAME}-relocobj PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
 
 install(DIRECTORY ${SDK_HEADERS_DIR} DESTINATION include/)
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}-static
-  EXPORT ${PROJECT_NAME}-targets
-  #PUBLIC_HEADER DESTINATION ${PROJECT_NAME}
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-  FRAMEWORK DESTINATION lib
-)  
-install(EXPORT ${PROJECT_NAME}-targets
-  DESTINATION lib/cmake/${PROJECT_NAME}
-  FILE ${PROJECT_NAME}-config.cmake
-)
+setup_deploy(${TARGET_NAME} ${SDK_HEADERS})
