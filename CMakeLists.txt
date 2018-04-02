@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.0)
 # targets: ugs(shared or reloc obj), ugs-static, ugs-static-dydep
 if(NOT DEFINED UGS_PROJECT_NAME)
   set(UGS_PROJECT_NAME ugs)
@@ -8,17 +9,8 @@ if(POLICY CMP0025)
 # MUST call before project() and enable_language
   cmake_policy(SET CMP0025 NEW) # since 3.0, prefer AppleClang instead of Clang. FIXME: ios is still Clang
 endif()
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 0)
-set(VERSION_MICRO 0)
-set(PROJECT_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_MICRO})
-if(NOT CMAKE_VERSION VERSION_LESS 3.0)
-  cmake_policy(SET CMP0048 OLD)
-endif()
-project(${UGS_PROJECT_NAME}) #VERSION ${PROJECT_VERSION}) # VERSION: 3.0
+project(${UGS_PROJECT_NAME} VERSION 0.0.0) # VERSION: cmake 3.0+
 set(TARGET_NAME ${PROJECT_NAME})
-set(SO_VERSION ${VERSION_MAJOR})
-cmake_minimum_required(VERSION 2.8)
 
 # reset var inherited from parent
 set(EXTRA_LIBS)
@@ -110,7 +102,7 @@ endif()
 
 add_library(${TARGET_NAME}-objs OBJECT ${SRC})
 add_library(${TARGET_NAME}-static-objs OBJECT ${SRC})
-add_library(${TARGET_NAME} SHARED $<TARGET_OBJECTS:${TARGET_NAME}-objs>)
+add_library(${TARGET_NAME} SHARED ${SDK_HEADERS} $<TARGET_OBJECTS:${TARGET_NAME}-objs>)
 add_library(${TARGET_NAME}-static STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
 add_library(${TARGET_NAME}-relocobj STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
 
@@ -130,9 +122,10 @@ set_target_properties(${TARGET_NAME} PROPERTIES
     FRAMEWORK ON
     RELOCATABLE ${UGS_RELOCATABLE} # custom property. use set_relocatable_flags() to apply linker flags. TODO: patch for cmake
     VERSION ${PROJECT_VERSION}
-    SOVERSION ${SO_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
     OUTPUT_NAME ${TARGET_NAME}
     CLEAN_DIRECT_OUTPUT 1
+    PUBLIC_HEADER "${SDK_HEADERS}"
 )
 set_relocatable_flags(${TARGET_NAME})
 set_rpath() # not reloc obj
@@ -155,5 +148,4 @@ endif()
 target_link_libraries(${TARGET_NAME}-static PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS})
 target_link_libraries(${TARGET_NAME}-relocobj PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
 
-install(DIRECTORY ${SDK_HEADERS_DIR} DESTINATION include/)
-setup_deploy(${TARGET_NAME} ${SDK_HEADERS})
+setup_deploy(${TARGET_NAME})
