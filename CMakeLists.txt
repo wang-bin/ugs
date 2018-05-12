@@ -49,7 +49,7 @@ set(SRC
 if(WIN32)
   if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
     list(APPEND SRC Win32Surface.cpp)
-    list(APPEND EXTRA_DYLIBS User32)
+    list(APPEND EXTRA_DYLIBS user32)
   endif()
 endif()
 if(ANDROID)
