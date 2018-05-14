@@ -2,12 +2,12 @@
  they are hook_XXX() with the same Surface parameter
  */
 /*
- * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <jni.h>
 #include <android/native_window_jni.h>
-#include "base/jmi/jmi.h"
+#include "jmi/jmi.h"
 
 UGS_NS_BEGIN
 void* javaVM(void* vm)

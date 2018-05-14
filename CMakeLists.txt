@@ -54,6 +54,7 @@ if(WIN32)
 endif()
 if(ANDROID)
   list(APPEND SRC AndroidSurface.cpp base/jmi/jmi.cpp)
+  set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${${PROJECT_NAME}_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
   list(APPEND EXTRA_DYLIBS android log)
 endif()
 if(IOS)
