@@ -13,6 +13,7 @@
 #include <iostream>
 #include <bcm_host.h>
 #include <EGL/egl.h>
+#include <dlfcn.h>
 
 UGS_NS_BEGIN
 static int getDisplayId() { // vc_dispmanx_types.h: DISPMANX_ID_MAIN_LCD 0, DISPMANX_ID_AUX_LCD 1, DISPMANX_ID_HDMI 2, DISPMANX_ID_SDTV 3, DISPMANX_ID_FORCE_LCD 4, DISPMANX_ID_FORCE_TV 5
@@ -23,7 +24,6 @@ static int getDisplayId() { // vc_dispmanx_types.h: DISPMANX_ID_MAIN_LCD 0, DISP
     if (e)
         id = std::atoi(e);
     id = std::min(std::max(id, DISPMANX_ID_MAIN_LCD), DISPMANX_ID_FORCE_TV);
-    std::clog << "dispmanx id: " << id << std::endl;
     return id;
 }
 
@@ -33,8 +33,11 @@ public:
     RPiSurface(): PlatformSurface() {
         bcm_host_init(); // required to create egl context
         display_ = vc_dispmanx_display_open(getDisplayId()); // vc4 returns null
+        std::clog << "dispmanx id: " << getDisplayId() << ", display: " << (void*)display_ << std::endl;
         if (!display_)
             return;
+        gles2_ = ::dlopen("libbrcmGLESv2.so", RTLD_LAZY|RTLD_GLOBAL); // link to libbrcmGLESv2.so may affect mesa GL drivers, so dynamic load when possible
+        std::clog << "preload libbrcmGLESv2.so: " << gles2_ << std::endl;
         // Let the window be fullscreen to simplify geometry change logic.
         // If the background is transparent and OpenGL viewport is not fullscreen, the result looks like a normal window
         resetNativeHandle(createFullscreenWindow(display_)); // virtual onNativeHandleChanged()!!!
@@ -49,6 +52,8 @@ public:
         vc_dispmanx_update_submit_sync(hUpdate);
         delete win;
 
+        if (gles2_)
+            dlclose(gles2_);
         vc_dispmanx_display_close(display_);
         bcm_host_deinit();
     }
@@ -56,6 +61,7 @@ private:
     EGL_DISPMANX_WINDOW_T* createFullscreenWindow(DISPMANX_DISPLAY_HANDLE_T disp);
 
     DISPMANX_DISPLAY_HANDLE_T display_ = 0;
+    void* gles2_ = nullptr;
 };
 
 PlatformSurface* create_rpi_surface() { return new RPiSurface();}
