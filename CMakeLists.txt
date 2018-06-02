@@ -35,6 +35,7 @@ endif()
 option(UGS_RELOCATABLE "Build ${PROJECT_NAME} as a relocatable object instead of a shared library" ${UGS_RELOCATABLE_DEFAULT})
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/include)
+  set(${PROJECT_NAME}_INCLUDE_PATH ${PROJECT_SOURCE_DIR}/include)
   include_directories(${PROJECT_SOURCE_DIR}/include) # should not affect sub-projects
 endif()
 
@@ -87,7 +88,7 @@ if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND)
   list(APPEND EXTRA_DYLIBS ${WAYLAND_CLIENT_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
 endif()
 
-if(NOT MSVC) #clang-cl
+if(UNIX AND NOT APPLE AND NOT CYGWIN AND NOT ANDROID) #clang-cl
   find_package(PkgConfig)
   pkg_check_modules(PKG_GBM gbm)
   pkg_check_modules(PKG_LIBDRM libdrm)
@@ -96,6 +97,9 @@ if(PKG_GBM_FOUND AND PKG_LIBDRM_FOUND)
   set(HAVE_GBM 1)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_GBM=1")
   list(APPEND SRC GBMSurface.cpp)
+  if(CMAKE_CROSSCOMPILING)
+    string(REPLACE "-I/usr" "-I${CMAKE_SYSROOT}/usr" PKG_LIBDRM_CFLAGS ${PKG_LIBDRM_CFLAGS}) # -I/usr/include/libdrm
+  endif()
   set_source_files_properties(GBMSurface.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_GBM=1 ${PKG_GBM_CFLAGS} ${PKG_LIBDRM_CFLAGS}")
   list(APPEND EXTRA_DYLIBS ${PKG_GBM_LIBRARIES} ${PKG_LIBDRM_LIBRARIES})
 endif()
@@ -115,6 +119,10 @@ target_compile_definitions(${TARGET_NAME}-static-objs PRIVATE BUILD_UGS_STATIC)
 CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
 if(HAVE_LIBDL)
   list(APPEND EXTRA_DYLIBS dl)
+endif()
+CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_PTHREAD)
+if(HAVE_PTHREAD)
+  list(APPEND EXTRA_DYLIBS pthread) # rpi
 endif()
 
 if(EXTRA_LIB_DIR)
