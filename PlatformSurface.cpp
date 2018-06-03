@@ -25,6 +25,7 @@ extern PlatformSurface* create_x11_surface();
 extern PlatformSurface* create_win32_surface();
 extern PlatformSurface* create_wayland_surface();
 extern PlatformSurface* create_gbm_surface();
+extern PlatformSurface* create_malifb_surface();
 typedef PlatformSurface* (*surface_creator)();
 
 // TODO: print what is creating
@@ -68,6 +69,9 @@ PlatformSurface* PlatformSurface::create(Type type)
 #if (HAVE_GBM+0)
         create_gbm_surface,
 #endif
+#if defined(__arm__) && defined(__linux__)
+        create_malifb_surface,
+#endif // defined(__arm__) && defined(__linux__)
     }) { // TODO: how to avoid crash if create error?
         PlatformSurface* pw = create_win();
         if (pw && pw->nativeHandle())
