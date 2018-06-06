@@ -52,6 +52,7 @@ PlatformSurface* PlatformSurface::create(Type type)
         return create_gbm_surface();
 #endif
     // fallback to platform default surface
+    // TODO: set order by user
     for (auto create_win : std::initializer_list<surface_creator>{ // vs2013 does not support {}, it requires explicit std::initializer_list<surface_creator>{}
 #if defined(_WIN32) && !defined(UGS_OS_WINRT)
         create_win32_surface,
@@ -59,6 +60,9 @@ PlatformSurface* PlatformSurface::create(Type type)
         //create_wfc,
         create_rpi_surface,
 #endif
+#if defined(__arm__) && defined(__linux__)
+        create_malifb_surface, // accelerated fbdev is preferred over x11
+#endif // defined(__arm__) && defined(__linux__)
 // APPLE, Cygwin can support X11. FIXME: create x11 in RenderLoop on macOS may is not desired when using cocoa view
 #if (HAVE_X11+0) // defined(__gnu_linux__) && !defined(ANDROID)
         create_x11_surface,
@@ -69,9 +73,6 @@ PlatformSurface* PlatformSurface::create(Type type)
 #if (HAVE_GBM+0)
         create_gbm_surface,
 #endif
-#if defined(__arm__) && defined(__linux__)
-        create_malifb_surface,
-#endif // defined(__arm__) && defined(__linux__)
     }) { // TODO: how to avoid crash if create error?
         PlatformSurface* pw = create_win();
         if (pw && pw->nativeHandle())
