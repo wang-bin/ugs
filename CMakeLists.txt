@@ -115,7 +115,9 @@ add_library(${TARGET_NAME}-objs OBJECT ${SRC})
 add_library(${TARGET_NAME}-static-objs OBJECT ${SRC})
 add_library(${TARGET_NAME} SHARED ${SDK_HEADERS} $<TARGET_OBJECTS:${TARGET_NAME}-objs>)
 add_library(${TARGET_NAME}-static STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
-add_library(${TARGET_NAME}-relocobj STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
+if(UGS_RELOCATABLE)
+  add_library(${TARGET_NAME}-relocobj STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
+endif()
 
 target_compile_definitions(${TARGET_NAME}-objs PRIVATE BUILD_UGS_LIB)
 target_compile_definitions(${TARGET_NAME}-static-objs PRIVATE BUILD_UGS_STATIC)
@@ -157,10 +159,11 @@ endif()
 #target_link_libraries(${TARGET_NAME}-static-dydep INTERFACE ${EXTRA_DYLIBS})
 
 target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_LIBS}) # only static libs are enough for reloc obj targets, otherwise static + shared
-if(NOT UGS_RELOCATABLE)
+if(UGS_RELOCATABLE)
+  target_link_libraries(${TARGET_NAME}-relocobj PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
+else()
   target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_DYLIBS})
 endif()
 target_link_libraries(${TARGET_NAME}-static PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS})
-target_link_libraries(${TARGET_NAME}-relocobj PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
 
 setup_deploy(${TARGET_NAME})
