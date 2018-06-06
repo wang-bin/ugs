@@ -41,9 +41,15 @@ private:
 
 MaliFBSurface::MaliFBSurface() : PlatformSurface()
 {
-    libmali_ = ::dlopen("libMali.so", RTLD_LAZY|RTLD_GLOBAL);
+    std::clog << "try to create mali fbdev window" << std::endl;
+    libmali_ = ::dlopen("libMali.so", RTLD_LAZY|RTLD_GLOBAL); // not visible?
     if (!libmali_)
         return;
+    void* f = dlsym(libmali_, "DRI2Connect");
+    if (f) {
+        std::clog << "mali for X11 is loaded. skip creating mali fbdev window" << std::endl;
+        return;
+    }
     struct fb_var_screeninfo vinfo;
     int fd = ::open("/dev/fb0", O_RDWR);
     if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo) < 0) {
