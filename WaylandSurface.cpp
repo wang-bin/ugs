@@ -12,6 +12,10 @@
 #include <cstring>
 #include <iostream>
 
+// symbols does not exist on raspian 7
+_Pragma("weak wl_proxy_marshal_constructor")
+_Pragma("weak wl_proxy_marshal_constructor_versioned")
+
 UGS_NS_BEGIN
 WaylandSurface::WaylandSurface() : PlatformSurface()
 {
