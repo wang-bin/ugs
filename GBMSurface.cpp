@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <iostream>

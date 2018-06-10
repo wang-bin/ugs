@@ -11,6 +11,7 @@
 #include <cassert>
 #include <iostream>
 
+#pragma weak XInitThreads
 _Pragma("weak XOpenDisplay")
 #pragma weak XDisplayName
 #pragma weak XCloseDisplay
@@ -43,11 +44,12 @@ Display* open_x11_display() {
         std::clog << "weak symbol XDisplayName is null. libX11 is not loaded? set LD_PRELOAD to load X11" << std::endl;
         return nullptr;
     }
+    XInitThreads(); // MUST be before any x command to ensure multi-thread apps run correctly(lock for every call). If user or other libs call other x apis before it, this call has no effect
     static const char* name = XDisplayName(nullptr);
     Display* d = XOpenDisplay(name);
     if (!d) {
         std::clog << "failed to open default display. try to open :0" << std::endl;
-        static const char xdefault[] = ":0";
+        static const char xdefault[] = ":0"; // TODO: remove. controled by user to disable x11
         name = xdefault;
         d = XOpenDisplay(name);
     }
