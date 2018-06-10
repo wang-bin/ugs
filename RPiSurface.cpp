@@ -37,7 +37,9 @@ public:
         if (!display_)
             return;
         gles2_ = ::dlopen("libbrcmGLESv2.so", RTLD_LAZY|RTLD_GLOBAL); // link to libbrcmGLESv2.so may affect mesa GL drivers, so dynamic load when possible
-        std::clog << "preload libbrcmGLESv2.so: " << gles2_ << std::endl;
+        if (!gles2_) // fallback to old lib name(rpi1, respbian 7)
+            gles2_ = ::dlopen("/opt/vc/lib/libGLESv2.so", RTLD_LAZY|RTLD_GLOBAL);
+        std::clog << "Preload Broadcom GLESv2: " << gles2_ << std::endl;
         // Let the window be fullscreen to simplify geometry change logic.
         // If the background is transparent and OpenGL viewport is not fullscreen, the result looks like a normal window
         resetNativeHandle(createFullscreenWindow(display_)); // virtual onNativeHandleChanged()!!!
