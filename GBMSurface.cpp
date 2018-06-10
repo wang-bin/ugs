@@ -10,6 +10,13 @@ extern "C" {
 #include <fcntl.h>
 #include <unistd.h>
 }
+// symbols does not exist on raspian 7
+_Pragma("weak gbm_surface_create")
+_Pragma("weak gbm_surface_destroy")
+_Pragma("weak gbm_surface_release_buffer")
+_Pragma("weak gbm_surface_lock_front_buffer")
+_Pragma("weak gbm_bo_get_stride")
+
 UGS_NS_BEGIN
 class GBMSurface final: public PlatformSurface
 {
@@ -65,6 +72,8 @@ drmModeConnector* get_connector(int fd, drmModeRes* res)
 
 GBMSurface::GBMSurface() : PlatformSurface()
 {
+    if (!gbm_surface_create)
+        return;
     drm_fd_ = get_drm_fd();
     if (drm_fd_ < 0) {
         std::clog << "failed to open drm card" << std::endl;
