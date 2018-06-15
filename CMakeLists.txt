@@ -60,7 +60,7 @@ if(ANDROID)
 endif()
 if(IOS)
   list(APPEND SRC UIKitSurface.mm)
-  list(APPEND EXTRA_DYLIBS "-framework UIKit" "-framework Foundation") # Foundation: objc, CoreGraphics: CGRectNull
+  list(APPEND EXTRA_DYLIBS "-framework QuartzCore" "-framework UIKit" "-framework Foundation") # Foundation: objc, CoreGraphics: CGRectNull, QuartzCore: CALayer
 endif()
 if(RPI)
   list(APPEND SRC RPiSurface.cpp)
