@@ -121,6 +121,7 @@ endif()
 
 target_compile_definitions(${TARGET_NAME}-objs PRIVATE BUILD_UGS_LIB)
 target_compile_definitions(${TARGET_NAME}-static-objs PRIVATE BUILD_UGS_STATIC)
+include(CheckLibraryExists)
 CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
 if(HAVE_LIBDL)
   list(APPEND EXTRA_DYLIBS dl)
