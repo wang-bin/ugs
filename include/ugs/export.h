@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS(Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -41,7 +41,7 @@
 
 #define _UGS_STRINGIFY(X) #X
 
-#if defined(_MSC_VER) && _MSC_VER >= 1500
+#if (_MSC_VER + 0) >= 1500
 # define VC_NO_WARN(number)       __pragma(warning(disable: number))
 #else
 # define VC_NO_WARN(number)

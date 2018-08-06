@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -73,7 +73,6 @@ public:
         if (win)
             XDestroyWindow(display_, win);
     }
-    Type type() const override { return Type::X11; }
     void* nativeResource() const override {
         return ensure_x11_display();
     }
@@ -107,7 +106,7 @@ private:
 PlatformSurface* create_x11_surface() { return new X11Surface();}
 
 X11Surface::X11Surface()
-    : PlatformSurface()
+    : PlatformSurface(Type::X11)
 {
     std::clog << "creating x11 window..." << std::endl;
     display_ = (Display*)nativeResource(); // TODO: open and return

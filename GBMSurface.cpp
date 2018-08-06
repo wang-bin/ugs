@@ -23,7 +23,6 @@ class GBMSurface final: public PlatformSurface
 public:
     GBMSurface();
     ~GBMSurface() override;
-    Type type() const override { return Type::GBM; }
     void* nativeResource() const override { return dev_;}
     void submit() override;
 private:
@@ -70,7 +69,7 @@ drmModeConnector* get_connector(int fd, drmModeRes* res)
     return nullptr;
 }
 
-GBMSurface::GBMSurface() : PlatformSurface()
+GBMSurface::GBMSurface() : PlatformSurface(Type::GBM)
 {
     if (!gbm_surface_create)
         return;
@@ -129,7 +128,8 @@ void GBMSurface::submit()
 	drmModeAddFB(drm_fd_, gbm_bo_get_width(bo), gbm_bo_get_height(bo), 32, 32, pitch, handle, &fb);
 	drmModeSetCrtc(drm_fd_, crtc_->crtc_id, fb, 0, 0, &connector_->connector_id, 1, &mode_);
 	if (bo_) {
-		drmModeRmFB(drm_fd_, fb_);
+        // drmModePageFlip, wait flip
+		drmModeRmFB(drm_fd_, fb_); // TODO: rm previous
 		gbm_surface_release_buffer(surf_, bo_);
 	}
 	bo_ = bo;

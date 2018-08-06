@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,7 +19,6 @@ class WaylandSurface : public PlatformSurface
 public:
     WaylandSurface();
     ~WaylandSurface() override;
-    Type type() const override { return Type::Wayland; }
     void* nativeResource() const override { return display_;}
     void processEvents() override;
 

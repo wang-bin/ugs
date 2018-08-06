@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -29,7 +29,7 @@ extern PlatformSurface* create_malifb_surface();
 typedef PlatformSurface* (*surface_creator)();
 
 // TODO: print what is creating
-PlatformSurface* PlatformSurface::create(Type type)
+PlatformSurface* PlatformSurface::create(void* handle, Type type)
 {
     // android, ios surface does not create native handle internally, so do not check nativeHandle()
 #ifdef __ANDROID__
@@ -39,6 +39,9 @@ PlatformSurface* PlatformSurface::create(Type type)
     return create_uikit_surface();
 # endif
 #endif
+    // for implemented surfaces which are not dummy(wrapper) of native surfaces, return the dummy wrapper surface
+    if (handle)
+        return new PlatformSurface(type); 
 #ifdef HAVE_WAYLAND
     if (type == Type::Wayland)
         return create_wayland_surface();
@@ -64,7 +67,7 @@ PlatformSurface* PlatformSurface::create(Type type)
         create_malifb_surface, // accelerated fbdev is preferred over x11
 #endif // defined(__arm__) && defined(__linux__)
 // APPLE, Cygwin can support X11. FIXME: create x11 in RenderLoop on macOS may is not desired when using cocoa view
-#if (HAVE_X11+0) // defined(__gnu_linux__) && !defined(ANDROID)
+#if (HAVE_X11+0) /*&& defined(__gnu_linux__)*/ && !defined(ANDROID)
         create_x11_surface,
 #endif
 #if (HAVE_WAYLAND+0)
@@ -79,27 +82,34 @@ PlatformSurface* PlatformSurface::create(Type type)
             return pw;
         delete pw;
     }
-    return new PlatformSurface();
+    return new PlatformSurface(type);
 }
 
 class PlatformSurface::Private
 {
 public:
     bool closed = false;
+    PlatformSurface::Type type = PlatformSurface::Type::Default;
     void* native_handle = nullptr;
     std::function<void(void*)> handle_cb = nullptr;
     std::function<void()> cb = nullptr;
     mpsc_fifo<PlatformSurface::Event> events;
 };
 
-PlatformSurface::PlatformSurface()
+PlatformSurface::PlatformSurface(Type type)
     : d(new Private())
 {
+    d->type = type;
 }
 
 PlatformSurface::~PlatformSurface()
 {
     delete d;
+}
+
+PlatformSurface::Type PlatformSurface::type() const
+{
+    return d->type;
 }
 
 void PlatformSurface::resetNativeHandle(void* handle)

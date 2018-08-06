@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
- * Universal Graphics Surface
+ * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -56,10 +56,14 @@ public:
     /*!
      * If OS and window system supports to create multiple kinds of window/surface, Type must be specified to create the desired one.
      */
-    // TODO: from an existing native handle, and reset later
-    static PlatformSurface* create(Type type = Type::Default); // TODO: param existing NativeWindow? for android, ios etc. if not null, create a wrapper. if null, create internal window/surface
+    static PlatformSurface* create(Type type = Type::Default) {return create(nullptr, type);}
+    // param handle is exsiting native window handle. for android, ios etc..
+    // TODO: if handle is not null, create a wrapper(call resetNativeHandle?). if null, create internal window/surface, e.g. x11, win32 surface
+    static PlatformSurface* create(void* handle, Type type = Type::Default);
     virtual ~PlatformSurface();
+    Type type() const;
     void setEventCallback(std::function<void()> cb); // TODO: void(Event) as callback and remove event queue which can be implemented externally
+    // 
     void resetNativeHandle(void* h);
     void* nativeHandle() const;
     /*!
@@ -68,7 +72,6 @@ public:
       TODO: HDC for WGL, Visual for GLX?
      */
     virtual void* nativeHandleForGL() const { return nativeHandle();}
-    virtual Type type() const {return Type::Default;}
     virtual void* nativeResource() const {return nullptr;} // extra resource required by gfx context, e.g. wayland and x11 display
     virtual void submit() {}
     virtual bool size(int *w, int *h) const {return false;}
@@ -88,7 +91,7 @@ protected:
     // NOTE: it's recommended to call resize(w, h) in the callback
     void setNativeHandleChangeCallback(std::function<void(void* old)> cb);
 
-    PlatformSurface();
+    PlatformSurface(Type type = Type::Default);
 private:
     void pushEvent(Event&& e);
     class Private;
