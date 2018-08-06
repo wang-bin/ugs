@@ -1,0 +1,29 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: buildpack-deps:trusty
+    steps:
+      - checkout
+      - run: git submodule sync
+      - run: git submodule update --init --recursive
+      - run: |
+          uname -a
+          cat /etc/issue
+          tail -n 27 /proc/cpuinfo
+      - run: |
+          sudo apt update
+          sudo apt install -y cmake3 libx11-dev libwayland-dev ninja-build
+      - run: cmake -GNinja -H$PWD -B$PWD/build/host -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$PWD/ugs-linux64
+      - run: cmake --build build/host -- -v
+      - run: ls -lh build/host
+      - run: readelf -d build/host/libugs.so
+      - run: cmake -P build/host/cmake_install.cmake
+      - run: tar Jcvf /tmp/ugs-linux64.tar.xz ugs-linux64
+      - store_artifacts:
+          path: /tmp/ugs-linux64.tar.xz
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
