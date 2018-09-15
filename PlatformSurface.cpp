@@ -23,6 +23,7 @@ extern PlatformSurface* create_wfc();
 extern PlatformSurface* create_rpi_surface();
 extern PlatformSurface* create_x11_surface();
 extern PlatformSurface* create_win32_surface();
+extern PlatformSurface* create_winrt_surface();
 extern PlatformSurface* create_wayland_surface();
 extern PlatformSurface* create_gbm_surface();
 extern PlatformSurface* create_malifb_surface();
@@ -31,13 +32,15 @@ typedef PlatformSurface* (*surface_creator)();
 // TODO: print what is creating
 PlatformSurface* PlatformSurface::create(void* handle, Type type)
 {
-    // android, ios surface does not create native handle internally, so do not check nativeHandle()
+    // android, ios and winrt surface does not create native handle internally, so do not check nativeHandle()
 #ifdef __ANDROID__
     return create_android_surface();
 #elif defined(__APPLE__)
 # if !defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
     return create_uikit_surface();
 # endif
+#elif defined(UGS_OS_WINRT)
+    return create_winrt_surface();
 #endif
     // for implemented surfaces which are not dummy(wrapper) of native surfaces, return the dummy wrapper surface
     if (handle)
