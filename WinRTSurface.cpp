@@ -88,10 +88,10 @@ static float GetLogicalDpi()
     return dpi;
 }
 
-float DPIsToPixels(float dips)
+float DIPstoPixels(float dips)
 {
     static const float dipsPerInch = 96.0f;
-    return dips * GetLogicalDpi() / dipsPerInch;
+    return std::floor(dips * GetLogicalDpi() / dipsPerInch + 0.5f); // round to nearest int
 }
 
 bool WinRTSurface::size(int* w, int *h) const
@@ -102,9 +102,9 @@ bool WinRTSurface::size(int* w, int *h) const
         ABI::Windows::Foundation::Rect bounds;
         MS_ENSURE(win_->get_Bounds(&bounds), false);
         if (w)
-            *w = DPIsToPixels(bounds.Width);
+            *w = DIPstoPixels(bounds.Width);
         if (h)
-            *h = DPIsToPixels(bounds.Height);
+            *h = DIPstoPixels(bounds.Height);
         return true;
     }
     if (panel_) {
@@ -204,7 +204,7 @@ public:
     }
     // ISizeChangedEventHandler
     IFACEMETHOD(Invoke)(IInspectable *sender, ABI::Windows::UI::Xaml::ISizeChangedEventArgs *sizeChangedEventArgs) override {
-        // The size of the ISwapChainPanel control is returned in DIPs, the same unit as viewports.
+        // from angle: The size of the ISwapChainPanel control is returned in DIPs, the same unit as viewports.
         // XAML Clients of the ISwapChainPanel are required to use dips to define their layout sizes as well.
         ABI::Windows::Foundation::Size newSize;
         MS_ENSURE(sizeChangedEventArgs->get_NewSize(&newSize), S_OK);
@@ -229,7 +229,7 @@ public:
     IFACEMETHOD(Invoke)(ABI::Windows::UI::Core::ICoreWindow *sender, ABI::Windows::UI::Core::IWindowSizeChangedEventArgs *sizeChangedEventArgs) {
         ABI::Windows::Foundation::Size windowSize;
         MS_ENSURE(sizeChangedEventArgs->get_Size(&windowSize), S_OK);
-        const Size windowSizeInPixels = {DPIsToPixels(windowSize.Width), DPIsToPixels(windowSize.Height)};
+        const Size windowSizeInPixels = {DIPstoPixels(windowSize.Width), DIPstoPixels(windowSize.Height)};
         surface_->resize((int)windowSizeInPixels.Width, (int)windowSizeInPixels.Height);
         return S_OK;
     }
