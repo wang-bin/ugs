@@ -111,12 +111,12 @@ bool WinRTSurface::size(int* w, int *h) const
         ComPtr<ABI::Windows::UI::Xaml::IFrameworkElement> fe;
         MS_ENSURE(panel_.As(&fe), false);
         DOUBLE v;
-        if (w) {
-            MS_ENSURE(fe->get_Width(&v), false);
+        if (w) { // get_Width/Height is -inf, get_ActualWidth/Height is rendered size in dips(device independent unit)
+            MS_ENSURE(fe->get_ActualWidth(&v), false);
             *w = int(v);
         }
         if (h) {
-            MS_ENSURE(fe->get_Width(&v), false);
+            MS_ENSURE(fe->get_ActualHeight(&v), false);
             *h = int(v);
         }
         return true;
