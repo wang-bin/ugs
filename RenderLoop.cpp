@@ -16,6 +16,7 @@
 #include <thread>
 #include <iostream>
 
+//// TODO: frame rendering can be driven by frame push, master clock, vsync, subtitle(hi fps sub, but must < vsync fps), any of above conditions triggered, post update event in render loop
 UGS_NS_BEGIN
 using namespace std;
 
@@ -171,6 +172,13 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     shared_ptr<PlatformSurface> ss(surface);
     auto sp = new SurfaceContext{ss, nullptr};
     d->surfaces.push_back(sp);
+    surface->setEventCallback([=]{ // TODO: void(Event e)
+        d->schedule([=]{
+            if (!process(sp)) {
+                clog << "surface removed by event callback..." << endl;
+            }
+        });
+    });
     d->schedule([=]{
         if (!process(sp)) { // create=>resize=>close event in 1 process()
             clog << "deleting surface scheduled by surface add callback..." << endl;
