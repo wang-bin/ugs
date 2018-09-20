@@ -66,7 +66,7 @@ private:
     void* gles2_ = nullptr;
 };
 
-PlatformSurface* create_rpi_surface() { return new RPiSurface();}
+PlatformSurface* create_rpi_surface(void*) { return new RPiSurface();}
 
 EGL_DISPMANX_WINDOW_T* RPiSurface::createFullscreenWindow(DISPMANX_DISPLAY_HANDLE_T disp)
 {

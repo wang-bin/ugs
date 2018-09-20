@@ -63,7 +63,7 @@ MaliFBSurface::MaliFBSurface() : PlatformSurface()
     resetNativeHandle(&win_); // virtual onNativeHandleChanged()!!!
 }
 
-PlatformSurface* create_malifb_surface() {
+PlatformSurface* create_malifb_surface(void*) {
     if (access("/dev/mali", F_OK) == -1) // required? check loaded modules?
         return nullptr;
         // file exists. R_OK/W_OK/X_OK: read/write/execute permission

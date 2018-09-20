@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <cassert>
@@ -64,7 +64,7 @@ private:
     EGL_DISPMANX_WINDOW_T *dwin_ = nullptr;
 };
 
-PlatformSurface* create_wfc() {
+PlatformSurface* create_wfc(void*) {
     return new OpenWFCSurface();
 }
 

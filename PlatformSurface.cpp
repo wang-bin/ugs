@@ -19,15 +19,15 @@
 UGS_NS_BEGIN
 extern PlatformSurface* create_android_surface();
 extern PlatformSurface* create_uikit_surface();
-extern PlatformSurface* create_wfc();
-extern PlatformSurface* create_rpi_surface();
-extern PlatformSurface* create_x11_surface();
-extern PlatformSurface* create_win32_surface();
+extern PlatformSurface* create_wfc(void*);
+extern PlatformSurface* create_rpi_surface(void*);
+extern PlatformSurface* create_x11_surface(void*);
+extern PlatformSurface* create_win32_surface(void*);
 extern PlatformSurface* create_winrt_surface();
-extern PlatformSurface* create_wayland_surface();
-extern PlatformSurface* create_gbm_surface();
-extern PlatformSurface* create_malifb_surface();
-typedef PlatformSurface* (*surface_creator)();
+extern PlatformSurface* create_wayland_surface(void*);
+extern PlatformSurface* create_gbm_surface(void*);
+extern PlatformSurface* create_malifb_surface(void*);
+typedef PlatformSurface* (*surface_creator)(void*);
 
 // TODO: print what is creating
 PlatformSurface* PlatformSurface::create(void* handle, Type type)
@@ -43,19 +43,23 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
     return create_winrt_surface();
 #endif
     // for implemented surfaces which are not dummy(wrapper) of native surfaces, return the dummy wrapper surface
-    if (handle)
+    if (handle
+#ifdef _WIN32 // Win32Surface supports foreign window, others(gbm, wl, x11, coca) are not implemented
+     && type != Type::Default
+#endif
+     )
         return new PlatformSurface(type); 
 #ifdef HAVE_WAYLAND
     if (type == Type::Wayland)
-        return create_wayland_surface();
+        return create_wayland_surface(handle);
 #endif
 #ifdef HAVE_X11
     if (type == Type::X11)
-        return create_x11_surface();
+        return create_x11_surface(handle);
 #endif
 #ifdef HAVE_GBM
     if (type == Type::GBM)
-        return create_gbm_surface();
+        return create_gbm_surface(handle);
 #endif
     // fallback to platform default surface
     // TODO: set order by user
@@ -80,8 +84,8 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
         create_gbm_surface,
 #endif
     }) { // TODO: how to avoid crash if create error?
-        PlatformSurface* pw = create_win();
-        if (pw && pw->nativeHandle())
+        PlatformSurface* pw = create_win(handle);
+        if (pw && (pw->nativeHandle() || handle))
             return pw;
         delete pw;
     }

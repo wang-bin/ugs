@@ -103,7 +103,7 @@ private:
     Atom WM_PROTOCOLS = None;
 };
 
-PlatformSurface* create_x11_surface() { return new X11Surface();}
+PlatformSurface* create_x11_surface(void*) { return new X11Surface();}
 
 X11Surface::X11Surface()
     : PlatformSurface(Type::X11)

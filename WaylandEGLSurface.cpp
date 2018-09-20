@@ -9,6 +9,7 @@
  */
 #include "WaylandSurface.h"
 #include <dlfcn.h>
+#include <wayland-egl-core.h>
 
 _Pragma("weak wl_egl_window_create")
 _Pragma("weak wl_egl_window_destroy")
@@ -47,5 +48,5 @@ private:
     void* dso_ = nullptr;
 };
 
-PlatformSurface* create_wayland_surface() { return new WaylandEGLSurface(); }
+PlatformSurface* create_wayland_surface(void*) { return new WaylandEGLSurface(); }
 UGS_NS_END

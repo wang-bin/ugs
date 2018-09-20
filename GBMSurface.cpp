@@ -36,7 +36,7 @@ private:
     uint32_t fb_ = 0;
 };
 
-PlatformSurface* create_gbm_surface() { return new GBMSurface(); }
+PlatformSurface* create_gbm_surface(void*) { return new GBMSurface(); }
 
 int get_drm_fd(int card)
 {

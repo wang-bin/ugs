@@ -31,8 +31,8 @@ private:
     WNDPROC orig_proc_ = nullptr;
 };
 
-PlatformSurface* create_win32_surface() {
-    return new Win32Surface();
+PlatformSurface* create_win32_surface(void* handle) {
+    return new Win32Surface(handle);
 }
 
 LRESULT CALLBACK Win32Surface::WinProc(HWND handle, UINT message, WPARAM wParam, LPARAM lParam)
