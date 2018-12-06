@@ -77,10 +77,7 @@ if(X11_FOUND)
   list(APPEND SRC X11Surface.cpp)
   set_source_files_properties(X11Surface.cpp PROPERTIES COMPILE_FLAGS -I${X11_X11_INCLUDE_PATH})
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_X11=1")
-  if(APPLE)
-    # already marked as weak in cpp, so -weak-lX11 is not required.
-    list(APPEND EXTRA_DYLIBS -flat_namespace -Wl,-undefined,dynamic_lookup ${X11_X11_LIB})
-  endif()
+  # already marked as weak in cpp, so -weak-lX11 is not required.
   list(APPEND EXTRA_DYLIBS ${X11_X11_LIB})
 endif()
 
