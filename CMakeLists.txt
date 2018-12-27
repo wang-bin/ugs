@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-# targets: ugs(shared or reloc obj), ugs-static, ugs-static-dydep
+# targets: ugs(shared, static or relocobj)
 if(NOT DEFINED UGS_PROJECT_NAME)
   set(UGS_PROJECT_NAME ugs)
 else()
@@ -26,6 +26,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(cmake/tools/tools.cmake NO_POLICY_SCOPE)
 
 #########################################################################################################
+option(UGS_STATIC "build shared ugs library" OFF)
+
+if(UGS_STATIC)
+  set(LIB_TYPE STATIC)
+  add_definitions(-DBUILD_UGS_STATIC) # define before any target
+# ${TARGET_NAME}-relocobj the same as ${TARGET_NAME}-static except no dynamic dependencies as linking interface. it is used by relocatable object target. currently implemented by a static lib(TODO: do not use static objects?)
+else()
+  set(LIB_TYPE SHARED)
+  add_definitions(-DBUILD_UGS_LIB) # define before any target
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 if(IOS AND NOT IOS_EMBEDDED_FRAMEWORK)
   set(UGS_RELOCATABLE_DEFAULT ON)
@@ -110,16 +121,8 @@ if(EXTRA_CFLAGS)
   set_source_files_properties(PlatformSurface.cpp PROPERTIES COMPILE_FLAGS ${EXTRA_CFLAGS})
 endif()
 
-add_library(${TARGET_NAME}-objs OBJECT ${SRC})
-add_library(${TARGET_NAME}-static-objs OBJECT ${SRC})
-add_library(${TARGET_NAME} SHARED ${SDK_HEADERS} $<TARGET_OBJECTS:${TARGET_NAME}-objs>)
-add_library(${TARGET_NAME}-static STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
-if(UGS_RELOCATABLE)
-  add_library(${TARGET_NAME}-relocobj STATIC $<TARGET_OBJECTS:${TARGET_NAME}-static-objs>)
-endif()
+add_library(${TARGET_NAME} ${LIB_TYPE} ${SDK_HEADERS} ${SRC})
 
-target_compile_definitions(${TARGET_NAME}-objs PRIVATE BUILD_UGS_LIB)
-target_compile_definitions(${TARGET_NAME}-static-objs PRIVATE BUILD_UGS_STATIC)
 include(CheckLibraryExists)
 CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
 if(HAVE_LIBDL)
@@ -155,15 +158,13 @@ endif()
 if(EXTRA_LIBS)
   list(REMOVE_DUPLICATES EXTRA_LIBS)
 endif()
-#add_library(${TARGET_NAME}-static-dydep INTERFACE) # interface lib is not supported by cmake 2.x
-#target_link_libraries(${TARGET_NAME}-static-dydep INTERFACE ${EXTRA_DYLIBS})
 
-target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_LIBS}) # only static libs are enough for reloc obj targets, otherwise static + shared
-if(UGS_RELOCATABLE)
-  target_link_libraries(${TARGET_NAME}-relocobj PUBLIC ${EXTRA_LIBS}) # static dependencies only, may be used by reloc obj
+if(UGS_STATIC)
+  target_link_libraries(${TARGET_NAME} PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS}) # static dependencies only, may be used by reloc obj
+elseif(UGL_RELOCATABLE)
+  target_link_libraries(${TARGET_NAME} PUBLIC ${EXTRA_DYLIBS}) # or INTERFACE. dynamic libs only. relocobj itself contains no dependencies info
 else()
   target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_DYLIBS})
 endif()
-target_link_libraries(${TARGET_NAME}-static PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS})
 
 setup_deploy(${TARGET_NAME})
