@@ -27,6 +27,7 @@ include(cmake/tools/tools.cmake NO_POLICY_SCOPE)
 
 #########################################################################################################
 option(UGS_STATIC "build shared ugs library" OFF)
+option(UGS_EXAMPLES "build examples" OFF)
 
 if(UGS_STATIC)
   set(LIB_TYPE STATIC)
@@ -168,3 +169,7 @@ else()
 endif()
 
 setup_deploy(${TARGET_NAME})
+
+if(UGS_EXAMPLES)
+  add_subdirectory(examples)
+endif()
