@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  * 
@@ -14,8 +14,24 @@
 #include <bcm_host.h>
 #include <EGL/egl.h>
 #include <dlfcn.h>
+#include <fstream>
 
 UGS_NS_BEGIN
+using namespace std;
+
+static bool is_legacy_gl_driver()
+{ // fake kms can open dispmanx, but can not use it
+    std::ifstream is("/proc/modules");
+    if (!is.is_open())
+        return true;
+    string line;
+    while (std::getline(is, line)) {
+        if (line.find("vc4") != string::npos)
+            return false;
+    }
+    return true;
+}
+
 static int getDisplayId() { // vc_dispmanx_types.h: DISPMANX_ID_MAIN_LCD 0, DISPMANX_ID_AUX_LCD 1, DISPMANX_ID_HDMI 2, DISPMANX_ID_SDTV 3, DISPMANX_ID_FORCE_LCD 4, DISPMANX_ID_FORCE_TV 5
     static int id = -1;
     if (id >= 0)
@@ -36,6 +52,11 @@ public:
         std::clog << "dispmanx id: " << getDisplayId() << ", display: " << (void*)display_ << std::endl;
         if (!display_)
             return;
+        static const bool legacy = is_legacy_gl_driver();
+        if (!legacy) {
+            std::clog << "no legacy gl driver, skip dispmanx." << std::endl;
+            return;
+        }
         gles2_ = ::dlopen("libbrcmGLESv2.so", RTLD_LAZY|RTLD_GLOBAL); // link to libbrcmGLESv2.so may affect mesa GL drivers, so dynamic load when possible
         if (!gles2_) // fallback to old lib name(rpi1, respbian 7)
             gles2_ = ::dlopen("/opt/vc/lib/libGLESv2.so", RTLD_LAZY|RTLD_GLOBAL);
@@ -49,11 +70,12 @@ public:
         if (!display_)
             return;
         EGL_DISPMANX_WINDOW_T *win = static_cast<EGL_DISPMANX_WINDOW_T*>(nativeHandle());
-        DISPMANX_UPDATE_HANDLE_T hUpdate = vc_dispmanx_update_start(0);
-        vc_dispmanx_element_remove(hUpdate, win->element);
-        vc_dispmanx_update_submit_sync(hUpdate);
-        delete win;
-
+        if (win) {
+            DISPMANX_UPDATE_HANDLE_T hUpdate = vc_dispmanx_update_start(0);
+            vc_dispmanx_element_remove(hUpdate, win->element);
+            vc_dispmanx_update_submit_sync(hUpdate);
+            delete win;
+        }
         if (gles2_)
             dlclose(gles2_);
         vc_dispmanx_display_close(display_);
