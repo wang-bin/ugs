@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
@@ -10,7 +10,6 @@
 #include "ugs/PlatformSurface.h"
 extern "C" {
 #include <wayland-client.h>
-#include <wayland-egl.h>
 }
 
 UGS_NS_BEGIN
