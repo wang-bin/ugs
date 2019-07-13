@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <iostream>
@@ -10,13 +10,14 @@ extern "C" {
 #include <fcntl.h>
 #include <unistd.h>
 }
-// symbols does not exist on raspian 7
+// symbols does not exist on raspian 7(libgbm 8.0.5-4+deb7u2+rpi)
 _Pragma("weak gbm_surface_create")
 _Pragma("weak gbm_surface_destroy")
 _Pragma("weak gbm_surface_release_buffer")
 _Pragma("weak gbm_surface_lock_front_buffer")
 _Pragma("weak gbm_bo_get_stride")
 
+// make the whole library weak so that it(and dependencies)'s not required by rpath-link (ld.bfd), but need to preload at runtime if link with --as-needed
 UGS_NS_BEGIN
 class GBMSurface final: public PlatformSurface
 {

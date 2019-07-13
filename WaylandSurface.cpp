@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  * 
@@ -17,7 +17,7 @@ _Pragma("weak wl_proxy_marshal_constructor")
 _Pragma("weak wl_proxy_marshal_constructor_versioned")
 
 UGS_NS_BEGIN
-WaylandSurface::WaylandSurface() : PlatformSurface()
+WaylandSurface::WaylandSurface() : PlatformSurface(Type::Wayland)
 {
     display_ = wl_display_connect(nullptr);
     if (!display_) {
