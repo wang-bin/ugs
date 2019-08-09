@@ -18,7 +18,12 @@ set(EXTRA_DYLIBS)
 set(EXTRA_LIB_DIR)
 
 # https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/ (global and specified target)
-set(CMAKE_CXX_STANDARD 11)
+# https://bugs.llvm.org/show_bug.cgi?id=42843 # <type_traits> lld-link: error: duplicate symbol: bool const std::_Is_integral<bool> in a.obj and in b.obj
+if(CMAKE_C_COMPILER_ID MATCHES Clang AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0)
+  set(CMAKE_CXX_STANDARD 17)
+else()
+  set(CMAKE_CXX_STANDARD 11)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #SET(CMAKE_VERBOSE_MAKEFILE ON)
@@ -77,7 +82,7 @@ if(IOS)
   list(APPEND EXTRA_DYLIBS "-framework QuartzCore" "-framework UIKit" "-framework Foundation") # Foundation: objc, CoreGraphics: CGRectNull, QuartzCore: CALayer
 endif()
 if(RPI)
-  list(APPEND SRC RPiSurface.cpp)
+  list(APPEND SRC RPiSurface.cpp)#OpenWFCSurface.cpp depends on EGL GLESv2 but not linked
   set_source_files_properties(RPiSurface.cpp PROPERTIES COMPILE_FLAGS -I${RPI_VC_DIR}/include)
   list(APPEND EXTRA_DYLIBS -L${RPI_VC_DIR}/lib bcm_host)
 endif()
