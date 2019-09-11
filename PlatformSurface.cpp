@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
@@ -174,7 +174,7 @@ bool PlatformSurface::popEvent(Event &e)
     // SPSC is enough if events are generated in consumer thread(Produce/Consume is ordered) and at most 1 another thread
     // but processEvents() is also called in RenderLoop.waitForStopped(), so MPSC is require
     processEvents();
-    return d->events.pop(&e) > 0;
+    return d->events.pop(&e);
 }
 
 void PlatformSurface::pushEvent(Event&& e)
