@@ -1,8 +1,9 @@
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
  */
 #include "EGLRenderLoop.h"
 #include "ugs/PlatformSurface.h"
+#include <EGL/egl.h>
 #include <iostream>
 
 #define EGL_ENSURE(x, ...) EGL_RUN_CHECK(x, return __VA_ARGS__)

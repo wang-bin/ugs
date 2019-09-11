@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
@@ -14,6 +14,7 @@
 
 UGS_NS_BEGIN
 class PlatformSurface;
+using RenderContext = void*;
 class UGS_API RenderLoop
 {
 public:
@@ -39,12 +40,12 @@ public:
     std::weak_ptr<PlatformSurface> add(PlatformSurface* surface);
     /// the following functions are called in rendering thread
     RenderLoop& onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
-    RenderLoop& onDraw(std::function<bool(PlatformSurface*)> cb);
-    using RenderContext = void*;
+    // draw callback requres RenderContext parameter for d3d11, vulkan. opengl does not need it because context is implicit
+    RenderLoop& onDraw(std::function<bool(PlatformSurface*, RenderContext)> cb);
     // callback after context is created
-    RenderLoop& onContextCreated(std::function<void(PlatformSurface*, void*)> cb);
+    RenderLoop& onContextCreated(std::function<void(PlatformSurface*, RenderContext)> cb);
     // callback before destroying context. For example, happens when resetNativeHandle(nullptr)=>close()
-    RenderLoop& onDestroyContext(std::function<void(PlatformSurface*, void*)> cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
+    RenderLoop& onDestroyContext(std::function<void(PlatformSurface*, RenderContext)> cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
     // callback before surface close after context is destroyed
     RenderLoop& onClose(std::function<void(PlatformSurface*)> cb); // called when surface is about to be destroyed
 protected:

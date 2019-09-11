@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  * 
@@ -23,7 +23,7 @@ using namespace std;
 class RenderLoop::SurfaceContext {
 public:
     shared_ptr<PlatformSurface> surface;
-    void* ctx;
+    RenderContext ctx;
 };
 class RenderLoop::Private
 {
@@ -58,10 +58,10 @@ public:
 
     list<RenderLoop::SurfaceContext*> surfaces;
     function<void(PlatformSurface*,int,int)> resize_cb = nullptr;
-    function<bool(PlatformSurface*)> draw_cb = nullptr;
+    function<bool(PlatformSurface*, RenderContext)> draw_cb = nullptr;
     function<void(PlatformSurface*)> close_cb = nullptr;
-    function<void(PlatformSurface*,void*)> ctx_created_cb = nullptr;
-    function<void(PlatformSurface*,void*)> ctx_destroy_cb = nullptr;
+    function<void(PlatformSurface*, RenderContext)> ctx_created_cb = nullptr;
+    function<void(PlatformSurface*, RenderContext)> ctx_destroy_cb = nullptr;
     BlockingQueue<function<void()>> tasks; // TODO: unbounded_blocking_fifo w/ or w/o semaphore (depending on on draw call cost(profile))
 };
 
@@ -143,7 +143,7 @@ RenderLoop& RenderLoop::onResize(function<void(PlatformSurface*,int,int)> cb)
     return *this;
 }
 
-RenderLoop& RenderLoop::onDraw(function<bool(PlatformSurface*)> cb)
+RenderLoop& RenderLoop::onDraw(function<bool(PlatformSurface*, RenderContext)> cb)
 {
     d->draw_cb = cb;
     return *this;
@@ -225,7 +225,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             submitRenderContext(surface, ctx);
             surface->submit();
             // workaround for android wrong display rect. also force iOS resize rbo because makeCurrent is not always called in current implementation
-            // if (d->draw_cb && d->draw_cb(surface)) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
+            // if (d->draw_cb && d->draw_cb(surface, ctx)) // for all platforms? // for iOS, render in a correct viewport before swapBuffers
 #endif
         } else if (e.type == PlatformSurface::Event::NativeHandle) {
             std::clog << surface << "->PlatformSurface::Event::NativeHandle: " << e.handle.before << ">>>" << e.handle.after << std::endl;
@@ -263,7 +263,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         surface->release();
         return surface;
     }
-    if (d->draw_cb && d->draw_cb(surface)) { // not onDraw(surface) with surface is ok, because context is current
+    if (d->draw_cb && d->draw_cb(surface, ctx)) { // not onDraw(surface) with surface is ok, because context is current
         submitRenderContext(surface, ctx);
         surface->submit();
     }

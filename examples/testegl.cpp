@@ -6,16 +6,16 @@
 int main(int argc, char* argv[])
 {
   EGLRenderLoop loop;
-  loop.onDraw([](PlatformSurface* s) {
+  loop.onDraw([](PlatformSurface* s, RenderContext) {
     float r = float(intptr_t(s) % 1000) / 1000.0f;
     glClearColor(r, 1.0f, 0, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return true;
   }).onResize([](PlatformSurface*, int w, int h) {
       glViewport(0, 0, w, h);
-  }).onContextCreated([](PlatformSurface*, void*) {
+  }).onContextCreated([](PlatformSurface*, RenderContext) {
     std::clog << "onContextCreated" << std::endl;
-  }).onDestroyContext([](PlatformSurface*, void*) {
+  }).onDestroyContext([](PlatformSurface*, RenderContext) {
     std::clog << "onDestroyContext" << std::endl;
   });
 

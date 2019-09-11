@@ -3,8 +3,6 @@
  */
 #pragma once
 #include "ugs/RenderLoop.h"
-#include <EGL/egl.h>
-#include <memory>
 
 using namespace UGS_NS;
 class EGLRenderLoop final : public RenderLoop
@@ -14,5 +12,4 @@ protected:
   bool destroyRenderContext(PlatformSurface* surface, void* ctx) override;
   bool activateRenderContext(PlatformSurface* surface, void* ctx) override;
   bool submitRenderContext(PlatformSurface* surface, void* ctx) override;
-private:
 };
