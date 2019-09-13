@@ -14,10 +14,18 @@ int main(int argc, char* argv[])
     d3d11ctx->deviceContext()->ClearRenderTargetView(rtv, color);
     rtv->Release();
     return true;
-  }).onResize([](PlatformSurface*, int w, int h) {
-      std::clog << "onResize" << std::endl;
+  }).onResize([](PlatformSurface*, int w, int h, RenderContext ctx) {
+    auto d3d11ctx = reinterpret_cast<ContextD3D11*>(ctx);
+    // Setup the viewport
+    D3D11_VIEWPORT vp{};
+    vp.Width = (FLOAT)w;
+    vp.Height = (FLOAT)h;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    d3d11ctx->deviceContext()->RSSetViewports(1, &vp);
+    std::clog << "onResize" << std::endl;
   }).onContextCreated([](PlatformSurface*, RenderContext) {
-  std::clog << "onContextCreated" << std::endl;
+    std::clog << "onContextCreated" << std::endl;
   }).onDestroyContext([](PlatformSurface*, RenderContext) {
     std::clog << "onDestroyContext" << std::endl;
   });

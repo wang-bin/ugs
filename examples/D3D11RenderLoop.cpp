@@ -3,19 +3,6 @@
 #include <iostream>
 #include <system_error>
 #include <d3d11_1.h>
-#include <windows.h>
-#ifdef WINAPI_FAMILY
-# include <winapifamily.h>
-# if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#   define MS_API_DESKTOP 1
-# else
-#   define MS_WINRT 1
-#   define MS_API_APP 1
-# endif
-#else
-# define MS_API_DESKTOP 1
-#endif //WINAPI_FAMILY
-
 // vista is required to build with wrl, but xp runtime works
 #pragma push_macro("_WIN32_WINNT")
 #if _WIN32_WINNT < _WIN32_WINNT_VISTA
@@ -136,25 +123,12 @@ public:
     ComPtr<ID3D11RenderTargetView> rtv;
     MS_ENSURE(dev_->CreateRenderTargetView(bb.Get(), nullptr, &rtv), false);
     immediate_ctx_->OMSetRenderTargets(1, rtv.GetAddressOf(), nullptr); // why need GetAddressOf()? operator& wrong overload?
-    rtv_ = rtv;
-    ID3D11RenderTargetView* v = nullptr;
-    immediate_ctx_->OMGetRenderTargets(1, &v, nullptr);
-    // Setup the viewport
-    D3D11_VIEWPORT vp;
-    vp.Width = (FLOAT)width;
-    vp.Height = (FLOAT)height;
-    vp.MinDepth = 0.0f;
-    vp.MaxDepth = 1.0f;
-    vp.TopLeftX = 0;
-    vp.TopLeftY = 0;
-    immediate_ctx_->RSSetViewports(1, &vp);
     return true;
   }
 
 private:
   ComPtr<ID3D11Device> dev_;
   ComPtr<ID3D11DeviceContext> immediate_ctx_; // GetImmediateContext
-  ComPtr<ID3D11RenderTargetView> rtv_;
   ComPtr<IDXGISwapChain> swapchain_;
 };
 
@@ -165,9 +139,9 @@ void* D3D11RenderLoop::createRenderContext(PlatformSurface* surface)
   std::clog << "createRenderContext from surface " << surface << " with extra native res " << surface->nativeResource() << std::endl;
   auto d3d11ctx = new ContextD3D11Impl();
   if (!d3d11ctx->initDevice())
-    return false;
+    return nullptr;
   if (!d3d11ctx->initSwapChain(HWND(surface->nativeHandle()))) // TODO: resize
-    return false;
+    return nullptr;
   return d3d11ctx;
 }
 

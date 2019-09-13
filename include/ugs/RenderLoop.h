@@ -24,7 +24,7 @@ public:
     // close all surfaces, invoke onClose() callbacks, destroy gfx contexts and surfaces, then exit render loop
     void stop();
     /// MUST call stop() && waitForStopped() manually before destroying RenderLoop
-    void waitForStopped();
+    void waitForStopped();  // not required for foreign surface handles, run event loop and observe resize using gui kit api
     bool isRunning() const;
     void update(); // schedule onDraw for all surfaces
     /*!
@@ -39,7 +39,7 @@ public:
     // takes the ownership. but surface ptr can be accessed before close. To remove surface, call surface->close()
     std::weak_ptr<PlatformSurface> add(PlatformSurface* surface);
     /// the following functions are called in rendering thread
-    RenderLoop& onResize(std::function<void(PlatformSurface*, int w, int h)> cb);
+    RenderLoop& onResize(std::function<void(PlatformSurface*, int w, int h, RenderContext)> cb);
     // draw callback requres RenderContext parameter for d3d11, vulkan. opengl does not need it because context is implicit
     RenderLoop& onDraw(std::function<bool(PlatformSurface*, RenderContext)> cb);
     // callback after context is created

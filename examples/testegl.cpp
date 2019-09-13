@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
     glClearColor(r, 1.0f, 0, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return true;
-  }).onResize([](PlatformSurface*, int w, int h) {
+  }).onResize([](PlatformSurface*, int w, int h, RenderContext) {
       glViewport(0, 0, w, h);
   }).onContextCreated([](PlatformSurface*, RenderContext) {
     std::clog << "onContextCreated" << std::endl;

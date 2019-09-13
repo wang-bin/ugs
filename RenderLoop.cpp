@@ -57,7 +57,7 @@ public:
     thread render_thread;
 
     list<RenderLoop::SurfaceContext*> surfaces;
-    function<void(PlatformSurface*,int,int)> resize_cb = nullptr;
+    function<void(PlatformSurface*,int,int, RenderContext)> resize_cb = nullptr;
     function<bool(PlatformSurface*, RenderContext)> draw_cb = nullptr;
     function<void(PlatformSurface*)> close_cb = nullptr;
     function<void(PlatformSurface*, RenderContext)> ctx_created_cb = nullptr;
@@ -137,7 +137,7 @@ void RenderLoop::update()
     });
 }
 
-RenderLoop& RenderLoop::onResize(function<void(PlatformSurface*,int,int)> cb)
+RenderLoop& RenderLoop::onResize(function<void(PlatformSurface*,int,int,RenderContext)> cb)
 {
     d->resize_cb = cb;
     return *this;
@@ -220,7 +220,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         } else if (e.type == PlatformSurface::Event::Resize) {
             std::clog << "PlatformSurface::Event::Resize" << std::endl;
             if (d->resize_cb)
-                d->resize_cb(surface, e.size.width, e.size.height);
+                d->resize_cb(surface, e.size.width, e.size.height, ctx);
 #if defined(__ANDROID__) || defined(ANDROID)
             submitRenderContext(surface, ctx);
             surface->submit();
