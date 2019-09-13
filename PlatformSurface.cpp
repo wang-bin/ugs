@@ -73,8 +73,8 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
 #if defined(__arm__) && defined(__linux__)
         create_malifb_surface, // accelerated fbdev is preferred over x11
 #endif // defined(__arm__) && defined(__linux__)
-// APPLE, Cygwin can support X11. FIXME: create x11 in RenderLoop on macOS may is not desired when using cocoa view
-#if (HAVE_X11+0) /*&& defined(__gnu_linux__)*/ && !defined(ANDROID)
+// APPLE, Cygwin can support X11, but that's not the platform default, i.e. Type::Default
+#if (HAVE_X11+0) && defined(__gnu_linux__) && !defined(ANDROID)
         create_x11_surface,
 #endif
 #if (HAVE_WAYLAND+0)
