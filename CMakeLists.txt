@@ -32,7 +32,7 @@ include(cmake/tools/tools.cmake NO_POLICY_SCOPE)
 
 #########################################################################################################
 option(UGS_STATIC "build shared ugs library" OFF)
-option(UGS_EXAMPLES "build examples" OFF)
+option(UGS_EXAMPLES "build examples" ON)
 
 if(UGS_STATIC)
   set(LIB_TYPE STATIC)
