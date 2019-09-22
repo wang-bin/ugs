@@ -1,8 +1,10 @@
 
-
-add_executable(testegl testegl.cpp EGLRenderLoop.cpp)
-target_link_directories(testegl PRIVATE ${PROJECT_SOURCE_DIR}/lib)
-target_link_libraries(testegl ${TARGET_NAME} EGL GLESv2)
+include(FindOpenGL)
+if(OpenGL_EGL_FOUND)
+  add_executable(testegl testegl.cpp EGLRenderLoop.cpp)
+  #target_link_directories(testegl PRIVATE ${PROJECT_SOURCE_DIR}/lib)
+  target_link_libraries(testegl ${TARGET_NAME} OpenGL::EGL OpenGL::OpenGL)
+endif()
 
 if(WIN32)
   add_executable(testd3d11 testd3d11.cpp D3D11RenderLoop.cpp)
