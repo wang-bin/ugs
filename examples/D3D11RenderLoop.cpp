@@ -123,6 +123,13 @@ public:
     ComPtr<ID3D11RenderTargetView> rtv;
     MS_ENSURE(dev_->CreateRenderTargetView(bb.Get(), nullptr, &rtv), false);
     immediate_ctx_->OMSetRenderTargets(1, rtv.GetAddressOf(), nullptr); // why need GetAddressOf()? operator& wrong overload?
+    
+    D3D11_VIEWPORT vp{};
+    vp.Width = (FLOAT)width;
+    vp.Height = (FLOAT)height;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    immediate_ctx_->RSSetViewports(1, &vp);
     return true;
   }
 
