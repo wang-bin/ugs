@@ -41,6 +41,31 @@ public:
     return swapchain_.Get();
   }
 
+  ID3D11RenderTargetView* renderTargetView() const override {
+    return rtv_.Get();
+  }
+
+  void resizeBuffers(int w, int h) override {
+    printf("resizeBuffers: %dx%d\n", w, h);
+    //d3d11ctx->deviceContext()->ClearState();
+    // release back buffer resources first. https://docs.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers#remarks
+    rtv_.Reset();
+    DXGI_SWAP_CHAIN_DESC sd;
+    MS_ENSURE(swapchain_->GetDesc(&sd));
+    auto hr = S_OK;
+    MS_WARN((hr = swapchain_->ResizeBuffers(sd.BufferCount, w, h, sd.BufferDesc.Format, sd.Flags)));
+    if (hr == DXGI_ERROR_DEVICE_REMOVED) { // buffers>1
+      auto reason = dev_->GetDeviceRemovedReason();
+      printf("DXGI_ERROR_DEVICE_REMOVED: %#x\n", reason);
+      return;
+    }
+    //MS_ENSURE(swapchain_->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0));
+    ComPtr<ID3D11Texture2D> bb;
+    MS_ENSURE(swapchain_->GetBuffer(0, IID_PPV_ARGS(&bb)));
+    MS_ENSURE(dev_->CreateRenderTargetView(bb.Get(), nullptr, &rtv_));
+    immediate_ctx_->OMSetRenderTargets(1, rtv_.GetAddressOf(), nullptr); // why need GetAddressOf()? operator& wrong overload?
+  }
+
   bool initDevice()
   {
     UINT createDeviceFlags = 0;
@@ -92,7 +117,8 @@ public:
       sd.SampleDesc.Count = 1;
       sd.SampleDesc.Quality = 0;
       sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-      sd.BufferCount = 1;
+      sd.BufferCount = 2;
+      sd.SwapEffect = sd.BufferCount > 1 ? DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL : DXGI_SWAP_EFFECT_DISCARD; // win10: DXGI_SWAP_EFFECT_FLIP_DISCARD
       //sd.Flags = DXGI_SWAP_CHAIN_FLAG_DISPLAY_ONLY;
       ComPtr<IDXGISwapChain1> sc1;
       MS_ENSURE(factory2->CreateSwapChainForHwnd(dev_.Get(), hWnd, &sd, nullptr, nullptr, &sc1), false);
@@ -110,20 +136,15 @@ public:
       sd.OutputWindow = hWnd;
       sd.SampleDesc.Count = 1;
       sd.SampleDesc.Quality = 0;
+      sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
       sd.Windowed = TRUE;
 
       MS_ENSURE(factory1->CreateSwapChain(dev_.Get(), &sd, &swapchain_), false);
     }
     // Note this tutorial doesn't handle full-screen swapchains so we block the ALT+ENTER shortcut
     factory1->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+    resizeBuffers(width, height);
 
-    // Create a render target view
-    ComPtr<ID3D11Texture2D> bb;
-    MS_ENSURE(swapchain_->GetBuffer(0, IID_PPV_ARGS(&bb)), false);
-    ComPtr<ID3D11RenderTargetView> rtv;
-    MS_ENSURE(dev_->CreateRenderTargetView(bb.Get(), nullptr, &rtv), false);
-    immediate_ctx_->OMSetRenderTargets(1, rtv.GetAddressOf(), nullptr); // why need GetAddressOf()? operator& wrong overload?
-    
     D3D11_VIEWPORT vp{};
     vp.Width = (FLOAT)width;
     vp.Height = (FLOAT)height;
@@ -137,6 +158,7 @@ private:
   ComPtr<ID3D11Device> dev_;
   ComPtr<ID3D11DeviceContext> immediate_ctx_; // GetImmediateContext
   ComPtr<IDXGISwapChain> swapchain_;
+  ComPtr<ID3D11RenderTargetView> rtv_;
 };
 
 void* D3D11RenderLoop::createRenderContext(PlatformSurface* surface)

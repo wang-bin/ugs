@@ -18,4 +18,6 @@ public:
   virtual ~ContextD3D11() = default;
   virtual ID3D11DeviceContext* deviceContext() const = 0;
   virtual IDXGISwapChain* swapChain() const = 0;
+  virtual ID3D11RenderTargetView* renderTargetView() const = 0;
+  virtual void resizeBuffers(int w, int h) = 0;
 };

@@ -73,10 +73,12 @@ float4 PS(PS_INPUT input) : SV_Target
 
 ComPtr<ID3DBlob> CompileShader(const char* data, size_t size, LPCSTR szEntryPoint, LPCSTR szShaderModel)
 {
-  DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+  DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS| D3DCOMPILE_WARNINGS_ARE_ERRORS;
 #ifdef _DEBUG
   dwShaderFlags |= D3DCOMPILE_DEBUG;
   dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+  dsShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
 #endif
   ComPtr<ID3DBlob> b;
   ComPtr<ID3DBlob> eb;
@@ -252,21 +254,29 @@ int main(int argc, char* argv[])
   loop.onDraw([&](PlatformSurface*, RenderContext ctx) {
     float r = float(intptr_t(ctx) % 1000) / 1000.0f;
     auto d3d11ctx = reinterpret_cast<ContextD3D11*>(ctx);
-    ID3D11RenderTargetView* rtv = nullptr;
-    d3d11ctx->deviceContext()->OMGetRenderTargets(1, &rtv, nullptr);
+    /*ID3D11RenderTargetView* rtvs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
+    d3d11ctx->deviceContext()->OMGetRenderTargets(std::size(rtvs), rtvs, nullptr);
+    auto rtv = rtvs[0]; // can be null if buffers>1
+    */
+    auto rtv = d3d11ctx->renderTargetView();
+    if (!rtv)
+      return true;
+    d3d11ctx->deviceContext()->OMSetRenderTargets(1, &rtv, nullptr); // why required if buffers>1?
     const FLOAT color[] = { r, 1.0f, 0, 1.0f };
     d3d11ctx->deviceContext()->ClearRenderTargetView(rtv, color);
-    rtv->Release();
+    //rtv->Release();
     auto& s = ctx_shader[ctx];
     d3d11ctx->deviceContext()->VSSetShader(s.vs.Get(), nullptr, 0);
     d3d11ctx->deviceContext()->PSSetShader(s.ps.Get(), nullptr, 0);
     d3d11ctx->deviceContext()->Draw(s.vertexCount, 0);
+    d3d11ctx->deviceContext()->OMSetRenderTargets(0, nullptr, nullptr);
     return true;
   }).onResize([&](PlatformSurface*, int w, int h, RenderContext ctx) {
     std::clog << "onResize" << std::endl;
     if (w == 0 || h == 0)
       return;
     auto d3d11ctx = reinterpret_cast<ContextD3D11*>(ctx);
+    d3d11ctx->resizeBuffers(w, h);
     // Setup the viewport. Requires swapchain is recreated
     D3D11_VIEWPORT vp{};
     vp.Width = (FLOAT)w;
@@ -293,7 +303,7 @@ int main(int argc, char* argv[])
   });
 
   auto surface = loop.add(PlatformSurface::create()).lock();
-  surface->resize(640, 480);
+  surface->resize(128, 128);
   surface = loop.add(PlatformSurface::create()).lock();
   surface->resize(480, 320);
   loop.start();
