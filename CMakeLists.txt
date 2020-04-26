@@ -80,6 +80,9 @@ endif()
 if(IOS)
   list(APPEND SRC UIKitSurface.mm)
   list(APPEND EXTRA_DYLIBS "-framework QuartzCore" "-framework UIKit" "-framework Foundation") # Foundation: objc, CoreGraphics: CGRectNull, QuartzCore: CALayer
+elseif(APPLE)
+list(APPEND SRC CocoaSurface.mm)
+list(APPEND EXTRA_DYLIBS "-framework QuartzCore" "-framework AppKit" "-framework Foundation")
 endif()
 if(RPI)
   list(APPEND SRC RPiSurface.cpp)#OpenWFCSurface.cpp depends on EGL GLESv2 but not linked
