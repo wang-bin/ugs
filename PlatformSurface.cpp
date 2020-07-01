@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2020 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -15,10 +15,14 @@
 #   define UGS_OS_WINRT
 # endif
 #endif //WINAPI_FAMILY
+#if (__APPLE__+0)
+# include <TargetConditionals.h> // TARGET_OS_IPHONE/OSX
+#endif
 
 UGS_NS_BEGIN
 extern PlatformSurface* create_android_surface();
 extern PlatformSurface* create_uikit_surface();
+extern PlatformSurface* create_cocoa_surface();
 extern PlatformSurface* create_wfc(void*);
 extern PlatformSurface* create_rpi_surface(void*);
 extern PlatformSurface* create_x11_surface(void*);
@@ -35,20 +39,18 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
     // android, ios and winrt surface does not create native handle internally, so do not check nativeHandle()
 #ifdef __ANDROID__
     return create_android_surface();
-#elif defined(__APPLE__)
-# if !defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#elif (TARGET_OS_IPHONE+0)
     return create_uikit_surface();
-# endif
 #elif defined(UGS_OS_WINRT)
     return create_winrt_surface();
 #endif
     // for implemented surfaces which are not dummy(wrapper) of native surfaces, return the dummy wrapper surface
     if (handle
-#ifdef _WIN32 // Win32Surface supports foreign window, others(gbm, wl, x11, coca) are not implemented
+#if (_WIN32+0) || (TARGET_OS_OSX+0) // Win32Surface/CocoaSurface supports foreign window, others(gbm, wl, x11) are not implemented
      && type != Type::Default
 #endif
      )
-        return new PlatformSurface(type); 
+        return new PlatformSurface(type);
 #ifdef HAVE_WAYLAND
     if (type == Type::Wayland)
         return create_wayland_surface(handle);
@@ -60,6 +62,9 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
 #ifdef HAVE_GBM
     if (type == Type::GBM)
         return create_gbm_surface(handle);
+#endif
+#if (TARGET_OS_OSX+0)
+    return create_cocoa_surface();
 #endif
     // fallback to platform default surface
     // TODO: set order by user
@@ -179,7 +184,7 @@ bool PlatformSurface::popEvent(Event &e)
 
 void PlatformSurface::pushEvent(Event&& e)
 {
-    if (d->closed) // no pendding events for closed surface
+    if (d->closed) // no pending events for closed surface
         return;
     d->events.push(std::move(e));
     // TODO: user listeners
