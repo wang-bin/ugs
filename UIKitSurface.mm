@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2020 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -78,7 +78,7 @@ public:
             auto getLayer = [](NSObject* obj){
                 if ([obj isKindOfClass:[CALayer class]])
                     return (CALayer*)obj;
-                UIView *view = (UIView*)obj;
+                auto view = (UIView*)obj;
                 return view.layer;
             };
             if (old) { // updateNativeWindow(nullptr) called outside or resetNativeHandle(nullptr) in dtor
@@ -95,7 +95,7 @@ public:
             // http://stackoverflow.com/questions/4874288/use-key-value-observing-to-get-a-kvo-callback-on-a-uiviews-frame?noredirect=1&lq=1
             [layer_ addObserver:observer_ forKeyPath:@"bounds" options:NSKeyValueObservingOptionOld context:nil];
         });
-        observer_ = [PropertyObserver alloc];
+        observer_ = [[PropertyObserver alloc] init];
         [observer_ observeGeometryChange:[this](float w, float h){ resize(w, h);}];
         [observer_ observeAppStateChange:[this](bool allowed){
             mtx_.lock();
@@ -107,7 +107,9 @@ public:
             [[NSNotificationCenter defaultCenter] addObserver:observer_ selector:@selector(appStateChanged:) name:name object:nil];
         }
     }
-    ~UIKitSurface() {
+    ~UIKitSurface() override {
+        if (layer_)
+            CFRelease((CFTypeRef)layer_);
         resetNativeHandle(nullptr);
 #if !__has_feature(objc_arc)
         if (observer_)
@@ -127,14 +129,15 @@ public:
         return true;
     }
 
-    virtual bool acquire() override {
+    bool acquire() override {
         mtx_.lock();
         if (!gfx_allowed_)
             mtx_.unlock();
         //printf("gfx_allowed_: %d\n", gfx_allowed_);
         return gfx_allowed_;
     }
-    virtual void release() override {
+
+    void release() override {
         mtx_.unlock();
     }
 private:
