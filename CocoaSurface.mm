@@ -9,6 +9,7 @@
  */
 #include "ugs/PlatformSurface.h"
 #import <QuartzCore/CALayer.h>
+#if !(TARGET_OS_MACCATALYST+0)
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSView.h>
 #import <AppKit/NSWindow.h>
@@ -97,3 +98,4 @@ private:
 
 PlatformSurface* create_cocoa_surface() { return new CocoaSurface();}
 UGS_NS_END
+#endif // !(TARGET_OS_MACCATALYST+0)

@@ -8,6 +8,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "ugs/PlatformSurface.h"
+#include <TargetConditionals.h>
+#if (TARGET_OS_IPHONE+0) // ios or catalyst
 #import <UIKit/UIApplication.h>
 #import <UIKit/UIView.h>
 #include <iostream>
@@ -149,3 +151,4 @@ private:
 
 PlatformSurface* create_uikit_surface() { return new UIKitSurface();}
 UGS_NS_END
+#endif // (TARGET_OS_IPHONE+0)
