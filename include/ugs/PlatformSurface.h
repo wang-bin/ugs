@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2020 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -50,8 +50,10 @@ public:
     enum class Type : int8_t {
         Default, // platform default window/surface type if only 1 type is supported
         X11,
+        Xlib = X11,
         Wayland,
         GBM,
+        XCB,
     };
     /*!
      * If OS and window system supports to create multiple kinds of window/surface, Type must be specified to create the desired one.
@@ -63,7 +65,7 @@ public:
     virtual ~PlatformSurface();
     Type type() const;
     void setEventCallback(std::function<void()> cb); // TODO: void(Event) as callback and remove event queue which can be implemented externally
-    // 
+    //
     void resetNativeHandle(void* h);
     void* nativeHandle() const;
     /*!
@@ -71,6 +73,7 @@ public:
       used to create GL context. It can be different with nativeHandle, for example android nativeHandle() is a Surface ptr, while nativeHandleForGL() is ANativeWindow.
       TODO: HDC for WGL, Visual for GLX?
      */
+    virtual void* nativeHandleForVulkan() const { return nativeHandle();}
     virtual void* nativeHandleForGL() const { return nativeHandle();}
     virtual void* nativeResource() const {return nullptr;} // extra resource required by gfx context, e.g. wayland and x11 display
     virtual void submit() {}

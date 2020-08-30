@@ -2,7 +2,7 @@
  they are hook_XXX() with the same Surface parameter
  */
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2020 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <jni.h>
@@ -37,9 +37,14 @@ public:
         anw_ = nullptr;
     }
 
+    void* nativeHandleForVulkan() const override {
+        return anw_;
+    }
+
     void* nativeHandleForGL() const override {
         return anw_;
     }
+
     bool size(int* w, int *h) const override {
         if (!anw_)
             return false;
