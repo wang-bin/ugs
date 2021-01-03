@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2021 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -23,7 +23,7 @@ using namespace std;
 class RenderLoop::SurfaceContext {
 public:
     shared_ptr<PlatformSurface> surface;
-    RenderContext ctx;
+    RenderContext ctx; // TODO: if use the same context, use shared_ptr, deleter is destroyRenderContext
 };
 class RenderLoop::Private
 {
@@ -62,6 +62,7 @@ public:
     function<void(PlatformSurface*)> close_cb = nullptr;
     function<void(PlatformSurface*, RenderContext)> ctx_created_cb = nullptr;
     function<void(PlatformSurface*, RenderContext)> ctx_destroy_cb = nullptr;
+private:
     BlockingQueue<function<void()>> tasks; // TODO: unbounded_blocking_fifo w/ or w/o semaphore (depending on on draw call cost(profile))
 };
 
@@ -96,6 +97,7 @@ void RenderLoop::stop()
     if (!isRunning())
         return;
     d->stop_requested = true;
+    // call once per loop, so no lock
     for (auto sp : d->surfaces) {
         sp->surface->close();
     }
@@ -131,8 +133,12 @@ bool RenderLoop::isRunning() const
 void RenderLoop::update()
 {
     d->schedule([=]{
+        // TODO: lock? what if add(surface) now?
         for (auto sp : d->surfaces) {
-            process(sp);
+            if (!process(sp)) {
+                clog << "surface removed, skip current update" << endl;
+                break;
+            }
         }
     });
 }
@@ -171,6 +177,7 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
 {
     shared_ptr<PlatformSurface> ss(surface);
     auto sp = new SurfaceContext{ss, nullptr};
+    // TODO: lock?
     d->surfaces.push_back(sp);
     surface->setEventCallback([=]{ // TODO: void(Event e)
         d->schedule([=]{
@@ -264,7 +271,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         return surface;
     }
     if (d->draw_cb && d->draw_cb(surface, ctx)) { // not onDraw(surface) with surface is ok, because context is current
-        submitRenderContext(surface, ctx);
+        submitRenderContext(surface, ctx); // TODO: recreate context if false(device lost)?
         surface->submit();
     }
     surface->release();
