@@ -77,7 +77,7 @@ if(ANDROID)
   set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${${PROJECT_NAME}_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
   list(APPEND EXTRA_DYLIBS android log)
 endif()
-if(IOS) # ios or mac catalyst
+if(IOS OR MACCATALYST) # ios or mac catalyst
   list(APPEND SRC UIKitSurface.mm)
   list(APPEND EXTRA_DYLIBS "-framework QuartzCore" "-framework UIKit" "-framework Foundation") # Foundation: objc, CoreGraphics: CGRectNull, QuartzCore: CALayer
 elseif(APPLE)
