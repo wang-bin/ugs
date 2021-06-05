@@ -102,7 +102,7 @@ if(X11_FOUND)
 endif()
 
 find_package(Wayland COMPONENTS Client Egl)
-if(WAYLAND_CLIENT_FOUND AND WAYLAND_EGL_FOUND)
+if(Wayland_FOUND)
   set(HAVE_WAYLAND 1)
   list(APPEND SRC WaylandSurface.cpp WaylandEGLSurface.cpp)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_WAYLAND=1")
