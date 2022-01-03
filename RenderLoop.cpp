@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2021 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2022 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -98,6 +98,7 @@ void RenderLoop::stop()
         return;
     d->stop_requested = true;
     // call once per loop, so no lock
+    unique_lock lock(d->mtx);
     for (auto sp : d->surfaces) {
         sp->surface->close();
     }
@@ -111,7 +112,7 @@ void RenderLoop::waitForStopped()
     }
     while (d->running) {
         {
-            unique_lock<mutex> lock(d->mtx);
+            unique_lock lock(d->mtx);
             // surfaces.erase() on close.
             // TODO: lock free, schedule a task so in the same thread as ease(still has mutext in task queue)? main thread?
             // cow?
@@ -178,6 +179,7 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     shared_ptr<PlatformSurface> ss(surface);
     auto sp = new SurfaceContext{ss, nullptr};
     // TODO: lock?
+    unique_lock lock(d->mtx);
     d->surfaces.push_back(sp);
     surface->setEventCallback([=]{ // TODO: void(Event e)
         d->schedule([=]{
@@ -189,6 +191,7 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     d->schedule([=]{
         if (!process(sp)) { // create=>resize=>close event in 1 process()
             clog << "deleting surface scheduled by surface add callback..." << endl;
+            unique_lock lock(d->mtx);
             auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             delete *it;
             d->surfaces.erase(it); // gcc4.8 can not erase a const_iterator
@@ -217,7 +220,7 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
                 d->close_cb(surface);
             surface->release();
             auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
-            unique_lock<mutex> lock(d->mtx);
+            unique_lock lock(d->mtx);
             clog << "removing closed surface..." << endl;
             d->surfaces.erase(it);
             delete sp;
