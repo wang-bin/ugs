@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2022 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -68,7 +68,7 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
 #endif
     // fallback to platform default surface
     // TODO: set order by user
-    for (auto create_win : std::initializer_list<surface_creator>{ // vs2013 does not support {}, it requires explicit std::initializer_list<surface_creator>{}
+    const auto cs = std::initializer_list<surface_creator> { // vs2013 does not support {}, but explicit std::initializer_list<surface_creator>{} is a temp object
 #if defined(_WIN32) && !defined(UGS_OS_WINRT)
         create_win32_surface,
 #elif defined(OS_RPI)
@@ -88,7 +88,8 @@ PlatformSurface* PlatformSurface::create(void* handle, Type type)
 #if (HAVE_GBM+0)
         create_gbm_surface,
 #endif
-    }) { // TODO: how to avoid crash if create error?
+    };
+    for (auto create_win : cs) { // TODO: how to avoid crash if create error?
         PlatformSurface* pw = create_win(handle);
         if (pw && (pw->nativeHandle() || handle))
             return pw;
