@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2020-2022 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -51,7 +51,7 @@ public:
                 , [](CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo){
                     auto s = static_cast<CocoaSurface*>(observer);
                     auto view = (__bridge NSView*)object;
-                    s->resize(view.layer.frame.size.width, view.layer.frame.size.height);
+                    s->resize((int)view.layer.frame.size.width*view.layer.contentsScale, (int)view.layer.frame.size.height*view.layer.contentsScale);
                 }
                 , CFSTR("NSViewFrameDidChangeNotification")
                 , (const void*)view_
@@ -62,7 +62,7 @@ public:
                 object:view_
                 queue:[NSOperationQueue mainQueue] // or nil
                 usingBlock:^(NSNotification *note) {
-                    resize(view_.frame.size.width, view_.frame.size.height);
+                    resize(view_.frame.size.width*view.layer.contentsScale, view_.frame.size.height*view.layer.contentsScale);
             }];
 #endif
         });
@@ -84,11 +84,11 @@ public:
     bool size(int *w, int *h) const override {
         if (!view_)
             return false;
-        //printf("~~~~~~view size: %fx%f, .layer: %p, layer size: %fx%f~~~~~~\n", view_.frame.size.width, view_.frame.size.height, view_.layer, view_.layer.bounds.size.width, view_.layer.bounds.size.height);
+        //printf("%p~~~~~~view size: %fx%f, .layer: %p, layer size: %fx%f @%f~~~~~~\n", this, view_.frame.size.width, view_.frame.size.height, view_.layer, view_.layer.bounds.size.width, view_.layer.bounds.size.height, view_.layer.contentsScale);
         if (w)
-            *w = view_.frame.size.width;
+            *w = (int)view_.frame.size.width;
         if (h)
-            *h = view_.frame.size.height;
+            *h = (int)view_.frame.size.height;
         return true;
     }
 private:
