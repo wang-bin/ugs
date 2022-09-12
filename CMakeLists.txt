@@ -28,8 +28,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #SET(CMAKE_VERBOSE_MAKEFILE ON)
 #list(APPEND CMAKE_MODULE_PATH cmake)
-include(cmake/tools/tools.cmake NO_POLICY_SCOPE)
-
+if(EXISTS ${CMAKE_SOURCE_DIR}/cmake/tools/tools.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/tools/tools.cmake NO_POLICY_SCOPE)
+else()
+  include(cmake/tools/tools.cmake NO_POLICY_SCOPE)
+endif()
 #########################################################################################################
 option(UGS_STATIC "build shared ugs library" OFF)
 option(UGS_EXAMPLES "build examples" OFF)
@@ -73,6 +76,7 @@ if(WIN32)
   endif()
 endif()
 if(ANDROID)
+#add_compile_options(-fno-emulated-tls)
   list(APPEND SRC AndroidSurface.cpp base/jmi/jmi.cpp)
   set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${${PROJECT_NAME}_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
   list(APPEND EXTRA_DYLIBS android log)
