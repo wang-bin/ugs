@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.15)
 # targets: ugs(shared, static or relocobj)
 if(NOT DEFINED UGS_PROJECT_NAME)
   set(UGS_PROJECT_NAME ugs)
@@ -20,9 +20,9 @@ set(EXTRA_LIB_DIR)
 # https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/ (global and specified target)
 # https://bugs.llvm.org/show_bug.cgi?id=42843 # <type_traits> lld-link: error: duplicate symbol: bool const std::_Is_integral<bool> in a.obj and in b.obj
 if(CMAKE_C_COMPILER_ID MATCHES Clang AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 else()
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -58,6 +58,9 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/include)
   set(${PROJECT_NAME}_INCLUDE_PATH ${PROJECT_SOURCE_DIR}/include)
   include_directories(${PROJECT_SOURCE_DIR}/include) # should not affect sub-projects
 endif()
+
+find_package(Threads REQUIRED)
+link_libraries(Threads::Threads)
 
 set(EXTRA_CFLAGS)
 set(SDK_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -145,10 +148,6 @@ CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
 if(HAVE_LIBDL)
   list(APPEND EXTRA_DYLIBS dl)
 endif()
-CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_PTHREAD)
-if(HAVE_PTHREAD)
-  list(APPEND EXTRA_DYLIBS pthread) # rpi
-endif()
 
 if(EXTRA_LIB_DIR)
   list(REMOVE_DUPLICATES EXTRA_LIB_DIR)
@@ -177,7 +176,7 @@ if(EXTRA_LIBS)
 endif()
 
 if(UGS_STATIC)
-  target_link_libraries(${TARGET_NAME} PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS}) # static dependencies only, may be used by reloc obj
+  target_link_libraries(${TARGET_NAME} PUBLIC ${EXTRA_LIBS} ${EXTRA_DYLIBS} Threads::Threads) # static dependencies only, may be used by reloc obj
 elseif(UGL_RELOCATABLE)
   target_link_libraries(${TARGET_NAME} PUBLIC ${EXTRA_DYLIBS}) # or INTERFACE. dynamic libs only. relocobj itself contains no dependencies info
 else()
