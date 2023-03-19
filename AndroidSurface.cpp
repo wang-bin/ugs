@@ -2,7 +2,7 @@
  they are hook_XXX() with the same Surface parameter
  */
 /*
- * Copyright (c) 2017-2020 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <jni.h>
@@ -31,7 +31,7 @@ public:
             anw_ = ANativeWindow_fromSurface(jmi::getEnv(), s);
         });
     }
-    ~AndroidSurface() {
+    ~AndroidSurface() override {
         if (anw_)
             ANativeWindow_release(anw_);
         anw_ = nullptr;

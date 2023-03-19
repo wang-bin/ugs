@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -16,7 +16,7 @@ class Win32Surface final: public PlatformSurface
 {
 public:
     Win32Surface(void* handle = nullptr, int x = 0, int y = 0, int w = 0, int h = 0);
-    ~Win32Surface();
+    ~Win32Surface() override;
     bool size(int* w, int *h) const override;
     void resize(int w, int h) override { doResize(w, h);}
     void close() override;
@@ -153,6 +153,6 @@ bool Win32Surface::processEvent(UINT message, WPARAM wParam, LPARAM lParam)
     default:
         return false;
     }
-    return false; // return false to always CallWindowProc? 
+    return false; // return false to always CallWindowProc?
 }
 UGS_NS_END

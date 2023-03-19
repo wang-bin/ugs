@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2020-2023 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -51,7 +51,7 @@ public:
                 , [](CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo){
                     auto s = static_cast<CocoaSurface*>(observer);
                     auto view = (__bridge NSView*)object;
-                    s->resize((int)view.layer.frame.size.width*view.layer.contentsScale, (int)view.layer.frame.size.height*view.layer.contentsScale);
+                    s->resize(static_cast<int>(view.layer.frame.size.width*view.layer.contentsScale), static_cast<int>(view.layer.frame.size.height*view.layer.contentsScale));
                 }
                 , CFSTR("NSViewFrameDidChangeNotification")
                 , (const void*)view_

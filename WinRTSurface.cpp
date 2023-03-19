@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
  */
 // EGLNativeWindowType IInspectable can be: ICoreWindow, ISwapChainPanel, IPropertySet([EGLNativeWindowTypeProperty] = ICoreWindow)
 #include "ugs/PlatformSurface.h"
@@ -28,7 +28,7 @@ using namespace ABI::Windows::ApplicationModel::Core;
 #define MS_WARN(f) MS_CHECK(f)
 #define MS_CHECK(f, ...)  do { \
         while (FAILED(GetLastError())) {} \
-        HRESULT hr = f; \
+        const HRESULT hr = f; \
         if (FAILED(hr)) { \
             std::clog << #f "  ERROR@" << __LINE__ << __FUNCTION__ << ": (" << std::hex << hr << std::dec << ") " << std::error_code(hr, std::system_category()).message() << std::endl; \
             __VA_ARGS__ \

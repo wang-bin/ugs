@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -17,7 +17,7 @@ UGS_NS_BEGIN
 // how to get current function result type easily?
 #define DEFINE_T_V(R, NAME, ARG_T, ARG_T_V, ARG_V) \
     R NAME ARG_T_V { \
-        static auto fp = (decltype(&NAME))dlsym(load_once(), #NAME); \
+        static const auto fp = (decltype(&(NAME)))dlsym(load_once(), #NAME); \
         assert(fp && "SYMBOL NOT FOUND: " #NAME); \
         return fp ARG_V; \
     }
@@ -58,7 +58,7 @@ public:
         wl_egl_window* eglwin = wl_egl_window_create(surface_, w_, h_);
         resetNativeHandle(reinterpret_cast<void*>(eglwin));
     }
-    ~WaylandEGLSurface() {
+    ~WaylandEGLSurface() override {
         wl_egl_window *win = static_cast<wl_egl_window*>(nativeHandle());
         if (win)
             wl_egl_window_destroy(win);

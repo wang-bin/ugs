@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2012-2023 WangBin <wbsecg1 at gmail.com>
  * Original code is from QtAV project
  */
 #pragma once
@@ -36,7 +36,7 @@ public:
     BlockingQueue& operator=(BlockingQueue const&) = delete;
 
     void setMax(size_t value) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         max_ = value;
         if (queue_.size() < max_)
             full_.notify_one();
@@ -44,7 +44,7 @@ public:
     size_t max() const { return max_;}
     /// TODO: rename setWakePop?
     void setMin(size_t value) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         min_ = value;
         if (queue_.size() > min_)
             empty_.notify_one(); // check size?
@@ -63,7 +63,7 @@ public:
     void setWakePush(size_t value) { wake_push_ = value;}
     size_t wakePush() const { return wake_push_;}
     void clear() {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::lock_guard lock(mutex_);
         queue_t tmp;
         queue_.swap(tmp);
         full_.notify_all();
@@ -75,7 +75,7 @@ public:
     bool tryPush(T &&t, int64_t timeout = 0) {
         if (size_ >= max_ && timeout <= 0)
             return false;
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         if (queue_.size() >= max_) {// TODO: virtual checkFull()
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
@@ -95,7 +95,7 @@ public:
     bool tryPush(const T &t, int64_t timeout = 0) {
         if (size_ >= max_ && timeout <= 0)
             return false;
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         if (queue_.size() >= max_) {
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
@@ -113,7 +113,7 @@ public:
         return true;
     }
     void push(T &&t) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         // checkFull, fullCB
         if (queue_.size() >= max_) {
             push_waiting_ = true;
@@ -128,7 +128,7 @@ public:
             empty_.notify_one();
     }
     void push(const T &t) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         if (queue_.size() >= max_) {
             push_waiting_ = true;
             ///pop_waiting_ = false; // ensure reset without pop
@@ -144,7 +144,7 @@ public:
     size_t tryPop(T &t, int64_t timeout = 0) { // TODO: atomic instead of lock
         if (size_ == 0 && timeout <= 0)
             return 0;
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         // checkEmpty, emptyCB
         if (queue_.empty()) {
             pop_waiting_ = true;
@@ -167,7 +167,7 @@ public:
         return nb;
     }
     size_t pop(T &t) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         // checkEmpty, emptyCB
         if (queue_.empty()) {
             pop_waiting_ = true;
@@ -189,14 +189,14 @@ public:
     size_t empty() const { return size() == 0;}
 
     const T& front() const {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::lock_guard lock(mutex_);
         static T bad;
         if (queue_.empty())
             return bad;
         return queue_.front();
     }
     const T& back() const {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::lock_guard lock(mutex_);
         static T bad;
         if (queue_.empty())
             return bad;
@@ -210,7 +210,7 @@ public:
     template<class F>
     auto distance(F f) const -> decltype(f(std::declval<queue_t>().cbegin(), std::declval<queue_t>().cend())) {
         using R = decltype(distance(f));
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::lock_guard lock(mutex_);
         if (queue_.empty())
             return R(0);
         return f(queue_.cbegin(), queue_.cend());

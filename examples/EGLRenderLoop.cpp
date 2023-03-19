@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
  */
 #include "EGLRenderLoop.h"
 #include "ugs/PlatformSurface.h"
@@ -38,7 +38,7 @@ public:
     EGL_WARN(ret = eglChooseConfig(display_, attr, &config_, 1, &nb_cfgs));
     if (ret == EGL_FALSE || nb_cfgs < 1) { // no error and return success even if pbuffer config is not found
       std::clog << "no config if surface type is set. try EGL_DONT_CARE" << std::endl;
-      attr[std::extent<decltype(attr)>::value - 2] = EGL_DONT_CARE;
+      attr[size(attr) - 2] = EGL_DONT_CARE;
       EGL_ENSURE(ret = eglChooseConfig(display_, attr, &config_, 1, &nb_cfgs));
     }
     if (nb_cfgs < 1) // fallback to renderable type es2 if current is es3?
@@ -61,7 +61,7 @@ public:
     if (surface_ != EGL_NO_SURFACE)
       EGL_WARN(eglDestroySurface(display_, surface_));
     EGL_WARN(eglReleaseThread());
-    EGL_WARN(eglTerminate(display_)); // 
+    EGL_WARN(eglTerminate(display_)); //
     display_ = EGL_NO_DISPLAY;
   }
 

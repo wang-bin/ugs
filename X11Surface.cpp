@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2018 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -69,7 +69,7 @@ public:
     ~X11Surface() override {
         if (!display_)
             return;
-        Window win = reinterpret_cast<Window>(nativeHandle());
+        const auto win = reinterpret_cast<Window>(nativeHandle());
         if (win)
             XDestroyWindow(display_, win);
     }
@@ -77,7 +77,7 @@ public:
         return ensure_x11_display();
     }
     bool size(int *w, int *h) const override {
-        Window win = reinterpret_cast<Window>(nativeHandle());
+        const Window win = reinterpret_cast<Window>(nativeHandle());
         if (!win)
             return false;
         XWindowAttributes wa;
@@ -115,11 +115,11 @@ X11Surface::X11Surface()
         return;
     }
 #if 1
-    Window root = DefaultRootWindow(display_);
+    const auto root = DefaultRootWindow(display_);
     XSetWindowAttributes swa;
     swa.event_mask = ExposureMask | PointerMotionMask | KeyPressMask | StructureNotifyMask;
     // CWColormap: invalid Colormap parameter if setNativeHandleChangeCallback() is called
-    Window win = XCreateWindow(display_, root, 0, 0, w_, h_, 0, CopyFromParent, InputOutput, CopyFromParent, /*CWColormap | */CWEventMask, &swa);
+    const Window win = XCreateWindow(display_, root, 0, 0, w_, h_, 0, CopyFromParent, InputOutput, CopyFromParent, /*CWColormap | */CWEventMask, &swa);
 #if 0
     XSetWindowAttributes xattr;
     xattr.override_redirect = False;
