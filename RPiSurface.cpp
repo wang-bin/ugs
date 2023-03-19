@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -15,6 +15,15 @@
 #include <EGL/egl.h>
 #include <dlfcn.h>
 #include <fstream>
+
+#include <EGL/eglext.h>
+#ifndef EGLEXT_BRCM_H // non-brcm egl headers are used
+typedef struct {
+    DISPMANX_ELEMENT_HANDLE_T element;
+    int width;   /* This is necessary because dispmanx elements are not queriable. */
+    int height;
+} EGL_DISPMANX_WINDOW_T;
+#endif
 
 UGS_NS_BEGIN
 using namespace std;
@@ -66,7 +75,7 @@ public:
         resetNativeHandle(createFullscreenWindow(display_)); // virtual onNativeHandleChanged()!!!
     }
 
-    ~RPiSurface() {
+    ~RPiSurface() override {
         if (!display_)
             return;
         EGL_DISPMANX_WINDOW_T *win = static_cast<EGL_DISPMANX_WINDOW_T*>(nativeHandle());
