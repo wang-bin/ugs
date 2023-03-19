@@ -93,8 +93,8 @@ elseif(APPLE)
 endif()
 if(RPI)
   list(APPEND SRC RPiSurface.cpp)#OpenWFCSurface.cpp depends on EGL GLESv2 but not linked
-  set_source_files_properties(RPiSurface.cpp PROPERTIES COMPILE_FLAGS -I${RPI_VC_DIR}/include)
-  list(APPEND EXTRA_DYLIBS -L${RPI_VC_DIR}/lib bcm_host)
+  set_source_files_properties(RPiSurface.cpp PROPERTIES COMPILE_FLAGS -I=/opt/vc/include)
+  list(APPEND EXTRA_DYLIBS bcm_host)
 endif()
 if(NOT WIN32 AND NOT APPLE)
   list(APPEND SRC MaliFBSurface.cpp)
@@ -129,8 +129,9 @@ if(PKG_GBM_FOUND AND PKG_LIBDRM_FOUND)
   set(HAVE_GBM 1)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_GBM=1")
   list(APPEND SRC GBMSurface.cpp)
+  # env PKG_CONFIG_SYSROOT_DIR==
   if(CMAKE_CROSSCOMPILING)
-    string(REPLACE "-I/usr" "-I${CMAKE_SYSROOT}/usr" PKG_LIBDRM_CFLAGS "${PKG_LIBDRM_CFLAGS}") # -I/usr/include/libdrm
+    string(REPLACE "-I/usr" "-I=/usr" PKG_LIBDRM_CFLAGS "${PKG_LIBDRM_CFLAGS}") # -I/usr/include/libdrm
   endif()
   string(REPLACE ";" " " PKG_LIBDRM_CFLAGS "${PKG_LIBDRM_CFLAGS}")
   set_source_files_properties(GBMSurface.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_GBM=1 ${PKG_GBM_CFLAGS} ${PKG_LIBDRM_CFLAGS}")
