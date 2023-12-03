@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -52,7 +52,8 @@ protected:
     virtual void* createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx) = 0;
     virtual bool activateRenderContext(PlatformSurface* surface, void* ctx) = 0;
-    virtual bool submitRenderContext(PlatformSurface* surface, void* ctx) = 0;
+    // changes: 1 if new format wanted, will invoke resize callback
+    virtual bool submitRenderContext(PlatformSurface* surface, void* ctx, int* changes = nullptr) = 0;
 private:
     class SurfaceContext;
     // process surface events and do rendering. return input surface, or null if surface is no longer used, e.g. closed

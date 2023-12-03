@@ -24,6 +24,8 @@ class RenderLoop::SurfaceContext {
 public:
     shared_ptr<PlatformSurface> surface;
     RenderContext ctx; // TODO: if use the same context, use shared_ptr, deleter is destroyRenderContext
+    int width = 0;
+    int height = 0;
 };
 class RenderLoop::Private
 {
@@ -228,7 +230,9 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
                 d->stop_requested = true;
             return nullptr; // FIXME
         } else if (e.type == PlatformSurface::Event::Resize) {
-            std::clog << "PlatformSurface::Event::Resize" << std::endl;
+            sp->width = e.size.width;
+            sp->height = e.size.height;
+            std::clog << "PlatformSurface::Event::Resize " << e.size.width << "x" << e.size.height << std::endl;
             if (d->resize_cb)
                 d->resize_cb(surface, e.size.width, e.size.height, ctx);
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -274,8 +278,11 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
         return surface;
     }
     if (d->draw_cb && d->draw_cb(surface, ctx)) { // not onDraw(surface) with surface is ok, because context is current
-        submitRenderContext(surface, ctx); // TODO: recreate context if false(device lost)?
+        int changes = 0;
+        submitRenderContext(surface, ctx, &changes); // TODO: recreate context if false(device lost)?
         surface->submit();
+        if (changes && sp->width > 0 && sp->height > 0) // surface->size() in thread may be not allowed
+            surface->PlatformSurface::resize(sp->width, sp->height);
     }
     surface->release();
     return surface;
