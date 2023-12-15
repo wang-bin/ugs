@@ -130,11 +130,14 @@ if(PKG_GBM_FOUND AND PKG_LIBDRM_FOUND)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_GBM=1")
   list(APPEND SRC GBMSurface.cpp)
   # env PKG_CONFIG_SYSROOT_DIR==
+  set(GMB_FLAGS ${PKG_GBM_CFLAGS} ${PKG_LIBDRM_CFLAGS})
+  list(REMOVE_DUPLICATES GMB_FLAGS)
   if(CMAKE_CROSSCOMPILING)
-    string(REPLACE "-I/usr" "-I=/usr" PKG_LIBDRM_CFLAGS "${PKG_LIBDRM_CFLAGS}") # -I/usr/include/libdrm
+    string(REPLACE "-I/usr" "-I=/usr" GMB_FLAGS "${GMB_FLAGS}") # -I/usr/include/libdrm
   endif()
-  string(REPLACE ";" " " PKG_LIBDRM_CFLAGS "${PKG_LIBDRM_CFLAGS}")
-  set_source_files_properties(GBMSurface.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_GBM=1 ${PKG_GBM_CFLAGS} ${PKG_LIBDRM_CFLAGS}")
+  string(REPLACE ";" " " GMB_FLAGS "${GMB_FLAGS}")
+  message("GMB_FLAGS: ${GMB_FLAGS}")
+  set_source_files_properties(GBMSurface.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_GBM=1 ${GMB_FLAGS}")
   list(APPEND EXTRA_DYLIBS ${PKG_GBM_LIBRARIES} ${PKG_LIBDRM_LIBRARIES})
 endif()
 
