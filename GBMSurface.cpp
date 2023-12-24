@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <iostream>
@@ -26,6 +26,13 @@ public:
     ~GBMSurface() override;
     void* nativeResource() const override { return dev_;}
     void submit() override;
+    bool size(int *w, int *h) const override {
+        if (w)
+            *w = mode_.hdisplay;
+        if (h)
+            *h = mode_.vdisplay;
+        return true;
+    }
 private:
     int drm_fd_ = 0;
     drmModeConnector *connector_ = nullptr;
@@ -54,7 +61,7 @@ int get_drm_fd()
         card = atoi(n);
     else
         std::clog << "env var DRM_NUM is not set, assume it's 0" << std::endl;
-    return get_drm_fd(card); 
+    return get_drm_fd(card);
 }
 
 drmModeConnector* get_connector(int fd, drmModeRes* res)
@@ -86,7 +93,7 @@ GBMSurface::GBMSurface() : PlatformSurface(Type::GBM)
         std::clog << "failed to get connector" << std::endl;
         return;
     }
-    mode_ = connector_->modes[0]; // 
+    mode_ = connector_->modes[0]; //
     drmModeEncoder *enc = drmModeGetEncoder(drm_fd_, connector_->encoder_id);
     if (!enc) {
         std::clog << "failed to get encoder" << std::endl;
@@ -123,8 +130,8 @@ GBMSurface::~GBMSurface()
 void GBMSurface::submit()
 {
     struct gbm_bo *bo = gbm_surface_lock_front_buffer(surf_);
-	uint32_t handle = gbm_bo_get_handle(bo).u32;
-	uint32_t pitch = gbm_bo_get_stride(bo);
+	const uint32_t handle = gbm_bo_get_handle(bo).u32;
+	const uint32_t pitch = gbm_bo_get_stride(bo);
 	uint32_t fb = 0;
 	drmModeAddFB(drm_fd_, gbm_bo_get_width(bo), gbm_bo_get_height(bo), 32, 32, pitch, handle, &fb);
 	drmModeSetCrtc(drm_fd_, crtc_->crtc_id, fb, 0, 0, &connector_->connector_id, 1, &mode_);
