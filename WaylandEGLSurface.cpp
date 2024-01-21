@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2024 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -12,7 +12,7 @@
 //#include <wayland-egl-core.h>
 #include <cassert>
 #include <iostream>
-
+using namespace std;
 UGS_NS_BEGIN
 // how to get current function result type easily?
 #define DEFINE_T_V(R, NAME, ARG_T, ARG_T_V, ARG_V) \
@@ -57,6 +57,7 @@ public:
             return;
         wl_egl_window* eglwin = wl_egl_window_create(surface_, w_, h_);
         resetNativeHandle(reinterpret_cast<void*>(eglwin));
+        wl_display_roundtrip(display_);
     }
     ~WaylandEGLSurface() override {
         wl_egl_window *win = static_cast<wl_egl_window*>(nativeHandle());
@@ -69,7 +70,7 @@ public:
         WaylandSurface::resize(w, h);
     }
 private:
-    int w_ = 1820, h_ = 1080;
+    int w_ = 1920, h_ = 1080;
 };
 
 PlatformSurface* create_wayland_surface(void*) { return new WaylandEGLSurface(); }

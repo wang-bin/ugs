@@ -115,6 +115,9 @@ find_package(Wayland COMPONENTS Client Egl)
 if(Wayland_FOUND)
   set(HAVE_WAYLAND 1)
   list(APPEND SRC WaylandSurface.cpp WaylandEGLSurface.cpp)
+# wayland-scanner client-header /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell.h
+# wayland-scanner private-code /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell.c
+  list(APPEND SRC xdg-shell.c)
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DHAVE_WAYLAND=1")
   include_directories(${WAYLAND_CLIENT_INCLUDE_DIR} ${WAYLAND_EGL_INCLUDE_DIR})
   list(APPEND EXTRA_DYLIBS ${WAYLAND_CLIENT_LIBRARIES}) # ${WAYLAND_EGL_LIBRARIES} may not exist at runtime
