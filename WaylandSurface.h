@@ -37,11 +37,19 @@ private:
 
     wl_compositor* compositor_ = nullptr;
     xdg_wm_base *wm_base_ = nullptr;
-    xdg_surface *xdg_surface_ = nullptr;
-    xdg_toplevel *xdg_toplevel_ = nullptr;
+    bool is_xdg_ = true;
 
+    union {
 // wl_shell is deprecated
-    wl_shell* shell_ = nullptr;
-    wl_shell_surface *shell_surface_ = nullptr;
+        struct {
+            wl_shell* shell;
+            wl_shell_surface *surface;
+        } wl;
+        struct {
+            xdg_wm_base *wm;
+            xdg_surface *surface;
+            xdg_toplevel *toplevel;
+        } xdg;
+    } shell_{};
 };
 UGS_NS_END

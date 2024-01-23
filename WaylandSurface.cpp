@@ -28,12 +28,13 @@ WaylandSurface::WaylandSurface() : PlatformSurface(Type::Wayland)
 
     surface_ = wl_compositor_create_surface(compositor_);
 
-    if (shell_) {
-        shell_surface_ = wl_shell_get_shell_surface(shell_, surface_);
+    if (!is_xdg_ && shell_.wl.shell) {
+        shell_.wl.surface = wl_shell_get_shell_surface(shell_.wl.shell, surface_);
         const wl_shell_surface_listener ss_listener = {&shell_surface_ping, &shell_surface_configure, &shell_surface_popup_done};
-        wl_shell_surface_add_listener(shell_surface_, &ss_listener, this);
-        wl_shell_surface_set_toplevel(shell_surface_);
-        wl_shell_surface_set_class(shell_surface_, "WaylandSurface");
+        wl_shell_surface_add_listener(shell_.wl.surface, &ss_listener, this);
+        wl_shell_surface_set_toplevel(shell_.wl.surface);
+        wl_shell_surface_set_class(shell_.wl.surface, "WaylandSurface");
+        wl_display_roundtrip(display_);
         return;
     }
 
@@ -44,9 +45,9 @@ WaylandSurface::WaylandSurface() : PlatformSurface(Type::Wayland)
                 xdg_wm_base_pong(wm_base, serial);
             },
         };
-        xdg_wm_base_add_listener(wm_base_, &listener, this);
+        xdg_wm_base_add_listener(shell_.xdg.wm, &listener, this);
     }
-    xdg_surface_ = xdg_wm_base_get_xdg_surface(wm_base_, surface_);
+    shell_.xdg.surface = xdg_wm_base_get_xdg_surface(shell_.xdg.wm, surface_);
     {
         static const xdg_surface_listener listener = {
             .configure = [](void *data, xdg_surface *surface, uint32_t serial) {
@@ -54,9 +55,9 @@ WaylandSurface::WaylandSurface() : PlatformSurface(Type::Wayland)
                 xdg_surface_ack_configure(surface, serial);
             },
         };
-        xdg_surface_add_listener(xdg_surface_, &listener, this);
+        xdg_surface_add_listener(shell_.xdg.surface, &listener, this);
     }
-    xdg_toplevel_ = xdg_surface_get_toplevel(xdg_surface_);
+    shell_.xdg.toplevel = xdg_surface_get_toplevel(shell_.xdg.surface);
     {
         static const xdg_toplevel_listener listener = {
             .configure = [](void *data, xdg_toplevel *toplevel, int32_t width, int32_t height, wl_array *states) {
@@ -77,20 +78,21 @@ WaylandSurface::WaylandSurface() : PlatformSurface(Type::Wayland)
             },
         };
 // listener functions can not be null!(abort listener function for opcode 3 of xdg_toplevel is NULL)
-        xdg_toplevel_add_listener(xdg_toplevel_, &listener, this);
+        xdg_toplevel_add_listener(shell_.xdg.toplevel, &listener, this);
     }
+    wl_display_roundtrip(display_);
 }
 
 WaylandSurface::~WaylandSurface()
 {
-    if (shell_surface_)
-        wl_shell_surface_destroy(shell_surface_);
-    if (xdg_toplevel_)
-        xdg_toplevel_destroy(xdg_toplevel_);
-    if (xdg_surface_)
-        xdg_surface_destroy(xdg_surface_);
-    if (wm_base_)
-        xdg_wm_base_destroy(wm_base_);
+    if (shell_.wl.surface)
+        wl_shell_surface_destroy(shell_.wl.surface);
+    if (shell_.xdg.toplevel)
+        xdg_toplevel_destroy(shell_.xdg.toplevel);
+    if (shell_.xdg.surface)
+        xdg_surface_destroy(shell_.xdg.surface);
+    if (shell_.xdg.wm)
+        xdg_wm_base_destroy(shell_.xdg.wm);
     if (surface_)
         wl_surface_destroy(surface_);
     if (display_)
@@ -99,8 +101,17 @@ WaylandSurface::~WaylandSurface()
 
 void WaylandSurface::processEvents()
 {
-    //wl_display_dispatch_pending(display_);
-    //wl_display_flush(display_);
+    wl_display_dispatch_pending(display_);
+    wl_display_flush(display_);
+#if 0
+    while (wl_display_prepare_read(display_)) {
+        wl_display_dispatch_pending(display_);
+    }
+    wl_display_flush(display_);
+    // poll(), wl_display_read_events(display);
+    wl_display_cancel_read(display_);
+    wl_display_dispatch_pending(display_);
+#endif
 }
 
 void WaylandSurface::registry_add_object(void *data, struct wl_registry *reg, uint32_t name, const char *interface, uint32_t version)
@@ -111,9 +122,11 @@ void WaylandSurface::registry_add_object(void *data, struct wl_registry *reg, ui
         ww->compositor_ = static_cast<wl_compositor*>(wl_registry_bind(reg, name, &wl_compositor_interface, version));
         ww->surface_ = wl_compositor_create_surface(ww->compositor_);
     } else if (!strcmp(interface, xdg_wm_base_interface.name)) {
-        ww->wm_base_ = (xdg_wm_base*)wl_registry_bind(reg, name, &xdg_wm_base_interface, version);
+        ww->is_xdg_ = true;
+        ww->shell_.xdg.wm = (xdg_wm_base*)wl_registry_bind(reg, name, &xdg_wm_base_interface, version);
     } else if (!strcmp(interface, wl_shell_interface.name)) {// "wl_shell"
-        ww->shell_ = static_cast<wl_shell*>(wl_registry_bind(reg, name, &wl_shell_interface, version));
+        ww->is_xdg_ = false;
+        ww->shell_.wl.shell = static_cast<wl_shell*>(wl_registry_bind(reg, name, &wl_shell_interface, version));
     }
 }
 
