@@ -28,6 +28,9 @@ protected:
     wl_surface *surface_ = nullptr;
 
 private:
+    void init_wl_shell();
+    void init_xdg_shell();
+
     static void registry_add_object(void *data, struct wl_registry *reg, uint32_t name, const char *interface, uint32_t version);
     static void registry_remove_object(void *data, struct wl_registry *reg, uint32_t name);
 
@@ -36,8 +39,7 @@ private:
     static void shell_surface_popup_done(void *data, struct wl_shell_surface *s);
 
     wl_compositor* compositor_ = nullptr;
-    xdg_wm_base *wm_base_ = nullptr;
-    bool is_xdg_ = true;
+    wl_seat* seat_ = nullptr;
 
     union {
 // wl_shell is deprecated
