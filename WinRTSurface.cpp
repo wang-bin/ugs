@@ -1,7 +1,15 @@
 /*
- * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2024 WangBin <wbsecg1 at gmail.com>
  */
 // EGLNativeWindowType IInspectable can be: ICoreWindow, ISwapChainPanel, IPropertySet([EGLNativeWindowTypeProperty] = ICoreWindow)
+# include <winapifamily.h>
+# pragma push_macro("_WIN32_WINNT")
+// RuntimeClass: desktop targeting win < 8.1 MUST ensure _WIN32_WINNT/NTDDI_VERSION < 8.1 to avoid using ::RoOriginateError() in GetRuntimeClassName()
+// To test win<8.1 build, redefine _WIN32_WINNT, and disable pop_macro
+# if _WIN32_WINNT >= 0x0603 && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+//#   undef _WIN32_WINNT
+//#   define _WIN32_WINNT 0x0600
+# endif
 #include "ugs/PlatformSurface.h"
 #include <future>
 #include <iostream>
@@ -10,12 +18,16 @@
 #include <windows.h>
 #include <wrl.h> //
 #include <wrl/client.h>
+#ifdef GetCurrentTime // defined in WinBase.h, conflicts with windows.ui.xaml
+# undef GetCurrentTime
+#endif
 #include <windows.foundation.h>
 #include <windows.system.threading.h>
 #include <windows.ui.core.h>
 #include <windows.ui.xaml.h>
 #include <windows.applicationmodel.core.h>
 #include <windows.graphics.display.h>
+# pragma pop_macro("_WIN32_WINNT")
 
 using namespace Microsoft::WRL; //ComPtr
 using namespace Microsoft::WRL::Wrappers; //HString
@@ -74,20 +86,24 @@ private:
 static float GetLogicalDpi()
 {
     const float kDefaultDPI = 96.0f;
-#if _WIN32_WINNT < 0x0A00
+    float dpi = kDefaultDPI;
+// dpi change: https://learn.microsoft.com/en-us/archive/msdn-magazine/2013/october/windows-with-c-rendering-for-the-windows-runtime
+#if _WIN32_WINNT >= 0x0602 // GetActivationFactory/HString requires win8(OneCore.lib/WindowsApp.lib). TODO: resolve from combase.dll?
+# if _WIN32_WINNT < 0x0A00
     ComPtr<ABI::Windows::Graphics::Display::IDisplayPropertiesStatics> info;
     MS_ENSURE(GetActivationFactory(HStringReference(RuntimeClass_Windows_Graphics_Display_DisplayProperties).Get(), &info), kDefaultDPI);
-#else
+# else
     ComPtr<ABI::Windows::Graphics::Display::IDisplayInformationStatics> st;
     MS_ENSURE(GetActivationFactory(HStringReference(RuntimeClass_Windows_Graphics_Display_DisplayInformation).Get(), &st), kDefaultDPI);
     ComPtr<ABI::Windows::Graphics::Display::IDisplayInformation> info;
     MS_ENSURE(st->GetForCurrentView(&info), kDefaultDPI);
-#endif
-    float dpi = kDefaultDPI;
+# endif
     MS_ENSURE(info->get_LogicalDpi(&dpi), kDefaultDPI);
+#endif
     return dpi;
 }
 
+// TODO: ISwapChainPanel.get_CompositionScaleX/Y
 float DIPstoPixels(float dips)
 {
     static const float dipsPerInch = 96.0f;
@@ -124,40 +140,6 @@ bool WinRTSurface::size(int* w, int *h) const
     return false;
 }
 
-static ICoreDispatcher* GetDispatcher()
-{
-    static __declspec(thread) ICoreDispatcher *dispatcher = nullptr;
-    if (dispatcher)
-        return dispatcher;
-    ComPtr<ICoreImmersiveApplication> application;
-    MS_ENSURE(RoGetActivationFactory(HString::MakeReference(RuntimeClass_Windows_ApplicationModel_Core_CoreApplication).Get(),
-                                IID_PPV_ARGS(&application)), nullptr);
-    ComPtr<ICoreApplicationView> view;
-    MS_ENSURE(application->get_MainView(&view), nullptr);
-    if (!view)
-        return nullptr;
-    ComPtr<ICoreWindow> window;
-    MS_ENSURE(view->get_CoreWindow(&window), nullptr);
-    if (window)
-        MS_ENSURE(window->get_Dispatcher(&dispatcher), nullptr);
-    // In case the application is launched via activation there might not be a main view (eg ShareTarget).
-    // Hence iterate through the available views and try to find a dispatcher in there
-    ComPtr<ABI::Windows::Foundation::Collections::IVectorView<CoreApplicationView*>> appViews;
-    MS_ENSURE(application->get_Views(&appViews), nullptr);
-    unsigned int count = 0;
-    MS_ENSURE(appViews->get_Size(&count), nullptr);
-    for (unsigned int i = 0; i < count; ++i) {
-        MS_ENSURE(appViews->GetAt(i, &view), nullptr);
-        MS_ENSURE(view->get_CoreWindow(&window), nullptr);
-        if (!window)
-            continue;
-        MS_ENSURE(window->get_Dispatcher(&dispatcher), nullptr);
-        if (dispatcher)
-            break;
-    }
-    return dispatcher;
-}
-
 class AgileDispatchedHandler : public RuntimeClass<RuntimeClassFlags<WinRtClassicComMix>, IDispatchedHandler, IAgileObject>
 {
 public:
@@ -172,11 +154,8 @@ private:
     std::promise<bool> p_;
 };
 
-bool RunOnUIThread(std::function<void()> f, bool wait = true)
+bool RunOnUIThread(ICoreDispatcher *dispatcher, std::function<void()> f, bool wait = true)
 {
-    ICoreDispatcher *dispatcher = GetDispatcher();
-    if (!dispatcher) // no ui
-        return false;
     boolean isUI;
     MS_ENSURE(dispatcher->get_HasThreadAccess(&isUI), false);
     if (isUI) {
@@ -244,13 +223,18 @@ bool WinRTSurface::registerSizeChange()
         MS_ENSURE(Microsoft::WRL::MakeAndInitialize<SwapChainPanelSizeChangedHandler>(&h, this), false);
         ComPtr<ABI::Windows::UI::Xaml::IFrameworkElement> fe;
         MS_ENSURE(inspectable_.As(&fe), false);
-        return RunOnUIThread([=]{
+        ComPtr<ABI::Windows::UI::Xaml::IDependencyObject> dep;
+        MS_ENSURE(panel_.As(&dep), false);
+        ComPtr<ICoreDispatcher> dispatcher;
+        MS_ENSURE(dep->get_Dispatcher(&dispatcher), false);
+        return RunOnUIThread(dispatcher.Get(), [=]{
             MS_ENSURE(fe->add_SizeChanged(h.Get(), &size_change_token_), false);
             return true;
         }, false); // usually successed, and return value is not used, so no wait
     }
     ComPtr<ABI::Windows::Foundation::Collections::IPropertySet> ps;
     if (SUCCEEDED(inspectable_.As(&ps)) && ps) {
+#if _WIN32_WINNT >= 0x0602
         ComPtr<ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable*>> propMap;
         if (SUCCEEDED(ps.As(&propMap))) {
             boolean hasKey = false;
@@ -258,6 +242,7 @@ bool WinRTSurface::registerSizeChange()
             if (SUCCEEDED(propMap->HasKey(key.Get(), &hasKey)) && hasKey)
                 MS_ENSURE(propMap->Lookup(key.Get(), &win_), false);
         }
+#endif // _WIN32_WINNT >= 0x0602
     } else {
         MS_ENSURE(inspectable_.As(&win_), false);
     }
@@ -282,7 +267,11 @@ void WinRTSurface::unregisterSizeChange()
     if (panel_) {
         ComPtr<ABI::Windows::UI::Xaml::IFrameworkElement> fe;
         MS_ENSURE(panel_.As(&fe));
-        RunOnUIThread([=]{
+        ComPtr<ABI::Windows::UI::Xaml::IDependencyObject> dep;
+        MS_ENSURE(panel_.As(&dep));
+        ComPtr<ICoreDispatcher> dispatcher;
+        MS_ENSURE(dep->get_Dispatcher(&dispatcher));
+        RunOnUIThread(dispatcher.Get(), [=]{
             fe->remove_SizeChanged(size_change_token_);
             size_change_token_.value = 0;
         }, false);
