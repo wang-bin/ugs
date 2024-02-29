@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2022 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -9,12 +9,6 @@
  */
 #include "ugs/PlatformSurface.h"
 #include "base/mpsc_fifo.h"
-#ifdef WINAPI_FAMILY
-# include <winapifamily.h>
-# if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#   define UGS_OS_WINRT
-# endif
-#endif //WINAPI_FAMILY
 #if (__APPLE__+0)
 # include <TargetConditionals.h> // TARGET_OS_IPHONE/OSX
 #endif
