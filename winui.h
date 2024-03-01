@@ -70,8 +70,6 @@ namespace WinUI { // winrt::Microsoft::UI::Xaml
         virtual int32_t __stdcall get_Dispatcher(void**) noexcept = 0;
         virtual int32_t __stdcall get_DispatcherQueue(void**) noexcept = 0;
     };
-    //MIDL_INTERFACE("FE08F13D-DC6A-5495-AD44-C2D8D21863B0")
-    //IFrameworkElement
 
     MIDL_INTERFACE("63aad0b8-7c24-40ff-85a8-640d944cc325")
     ISwapChainPanelNative : public IUnknown
@@ -81,5 +79,104 @@ namespace WinUI { // winrt::Microsoft::UI::Xaml
             /* [annotation][in] */
             _In_  IDXGISwapChain *swapChain) = 0;
 
+    };
+
+    struct Size
+    {
+        float Width;
+        float Height;
+    };
+
+    MIDL_INTERFACE("FE76324E-6DFB-58B1-9DCD-886CA8F9A2EA")
+    ISizeChangedEventArgs : IInspectable
+    {
+        virtual int32_t __stdcall get_PreviousSize(Size*) noexcept = 0;
+        virtual int32_t __stdcall get_NewSize(Size*) noexcept = 0;
+    };
+
+    MIDL_INTERFACE("8D7B1A58-14C6-51C9-892C-9FCCE368E77D")
+    ISizeChangedEventHandler : IUnknown
+    {
+        virtual int32_t __stdcall Invoke(IInspectable*, ISizeChangedEventArgs*) noexcept = 0;
+    };
+
+// template <> struct abi<winrt::Microsoft::UI::Xaml::IFrameworkElement>
+    MIDL_INTERFACE("FE08F13D-DC6A-5495-AD44-C2D8D21863B0")
+    IFrameworkElement : public IInspectable
+    {
+        virtual int32_t __stdcall get_Triggers(void**) noexcept = 0;
+        virtual int32_t __stdcall get_Resources(void**) noexcept = 0;
+        virtual int32_t __stdcall put_Resources(void*) noexcept = 0;
+        virtual int32_t __stdcall get_Tag(void**) noexcept = 0;
+        virtual int32_t __stdcall put_Tag(void*) noexcept = 0;
+        virtual int32_t __stdcall get_Language(void**) noexcept = 0;
+        virtual int32_t __stdcall put_Language(void*) noexcept = 0;
+        virtual int32_t __stdcall get_ActualWidth(double*) noexcept = 0;
+        virtual int32_t __stdcall get_ActualHeight(double*) noexcept = 0;
+        virtual int32_t __stdcall get_Width(double*) noexcept = 0;
+        virtual int32_t __stdcall put_Width(double) noexcept = 0;
+        virtual int32_t __stdcall get_Height(double*) noexcept = 0;
+        virtual int32_t __stdcall put_Height(double) noexcept = 0;
+        virtual int32_t __stdcall get_MinWidth(double*) noexcept = 0;
+        virtual int32_t __stdcall put_MinWidth(double) noexcept = 0;
+        virtual int32_t __stdcall get_MaxWidth(double*) noexcept = 0;
+        virtual int32_t __stdcall put_MaxWidth(double) noexcept = 0;
+        virtual int32_t __stdcall get_MinHeight(double*) noexcept = 0;
+        virtual int32_t __stdcall put_MinHeight(double) noexcept = 0;
+        virtual int32_t __stdcall get_MaxHeight(double*) noexcept = 0;
+        virtual int32_t __stdcall put_MaxHeight(double) noexcept = 0;
+        virtual int32_t __stdcall get_HorizontalAlignment(int32_t*) noexcept = 0;
+        virtual int32_t __stdcall put_HorizontalAlignment(int32_t) noexcept = 0;
+        virtual int32_t __stdcall get_VerticalAlignment(int32_t*) noexcept = 0;
+        virtual int32_t __stdcall put_VerticalAlignment(int32_t) noexcept = 0;
+        virtual int32_t __stdcall get_Margin(struct struct_Microsoft_UI_Xaml_Thickness*) noexcept = 0;
+        virtual int32_t __stdcall put_Margin(struct struct_Microsoft_UI_Xaml_Thickness) noexcept = 0;
+        virtual int32_t __stdcall get_Name(void**) noexcept = 0;
+        virtual int32_t __stdcall put_Name(void*) noexcept = 0;
+        virtual int32_t __stdcall get_BaseUri(void**) noexcept = 0;
+        virtual int32_t __stdcall get_DataContext(void**) noexcept = 0;
+        virtual int32_t __stdcall put_DataContext(void*) noexcept = 0;
+        virtual int32_t __stdcall get_AllowFocusOnInteraction(bool*) noexcept = 0;
+        virtual int32_t __stdcall put_AllowFocusOnInteraction(bool) noexcept = 0;
+        virtual int32_t __stdcall get_FocusVisualMargin(struct struct_Microsoft_UI_Xaml_Thickness*) noexcept = 0;
+        virtual int32_t __stdcall put_FocusVisualMargin(struct struct_Microsoft_UI_Xaml_Thickness) noexcept = 0;
+        virtual int32_t __stdcall get_FocusVisualSecondaryThickness(struct struct_Microsoft_UI_Xaml_Thickness*) noexcept = 0;
+        virtual int32_t __stdcall put_FocusVisualSecondaryThickness(struct struct_Microsoft_UI_Xaml_Thickness) noexcept = 0;
+        virtual int32_t __stdcall get_FocusVisualPrimaryThickness(struct struct_Microsoft_UI_Xaml_Thickness*) noexcept = 0;
+        virtual int32_t __stdcall put_FocusVisualPrimaryThickness(struct struct_Microsoft_UI_Xaml_Thickness) noexcept = 0;
+        virtual int32_t __stdcall get_FocusVisualSecondaryBrush(void**) noexcept = 0;
+        virtual int32_t __stdcall put_FocusVisualSecondaryBrush(void*) noexcept = 0;
+        virtual int32_t __stdcall get_FocusVisualPrimaryBrush(void**) noexcept = 0;
+        virtual int32_t __stdcall put_FocusVisualPrimaryBrush(void*) noexcept = 0;
+        virtual int32_t __stdcall get_AllowFocusWhenDisabled(bool*) noexcept = 0;
+        virtual int32_t __stdcall put_AllowFocusWhenDisabled(bool) noexcept = 0;
+        virtual int32_t __stdcall get_Style(void**) noexcept = 0;
+        virtual int32_t __stdcall put_Style(void*) noexcept = 0;
+        virtual int32_t __stdcall get_Parent(void**) noexcept = 0;
+        virtual int32_t __stdcall get_FlowDirection(int32_t*) noexcept = 0;
+        virtual int32_t __stdcall put_FlowDirection(int32_t) noexcept = 0;
+        virtual int32_t __stdcall get_RequestedTheme(int32_t*) noexcept = 0;
+        virtual int32_t __stdcall put_RequestedTheme(int32_t) noexcept = 0;
+        virtual int32_t __stdcall get_IsLoaded(bool*) noexcept = 0;
+        virtual int32_t __stdcall get_ActualTheme(int32_t*) noexcept = 0;
+        virtual int32_t __stdcall add_Loaded(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_Loaded(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_Unloaded(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_Unloaded(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_DataContextChanged(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_DataContextChanged(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_SizeChanged(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_SizeChanged(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_LayoutUpdated(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_LayoutUpdated(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_Loading(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_Loading(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_ActualThemeChanged(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_ActualThemeChanged(event_token) noexcept = 0;
+        virtual int32_t __stdcall add_EffectiveViewportChanged(void*, event_token*) noexcept = 0;
+        virtual int32_t __stdcall remove_EffectiveViewportChanged(event_token) noexcept = 0;
+        virtual int32_t __stdcall FindName(void*, void**) noexcept = 0;
+        virtual int32_t __stdcall SetBinding(void*, void*) noexcept = 0;
+        virtual int32_t __stdcall GetBindingExpression(void*, void**) noexcept = 0;
     };
 } // namespace WinUI

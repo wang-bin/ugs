@@ -29,6 +29,8 @@
 #include <windows.graphics.display.h>
 # pragma pop_macro("_WIN32_WINNT")
 
+#include "UIRun.h"
+#include "winui.h"
 using namespace Microsoft::WRL; //ComPtr
 using namespace Microsoft::WRL::Wrappers; //HString
 using namespace ABI::Windows::System::Threading;
@@ -36,23 +38,13 @@ using namespace ABI::Windows::Foundation;
 using namespace ABI::Windows::UI::Core;
 using namespace ABI::Windows::ApplicationModel::Core;
 
-#define MS_ENSURE(f, ...) MS_CHECK(f, return __VA_ARGS__;)
-#define MS_WARN(f) MS_CHECK(f)
-#define MS_CHECK(f, ...)  do { \
-        while (FAILED(GetLastError())) {} \
-        const HRESULT hr = f; \
-        if (FAILED(hr)) { \
-            std::clog << #f "  ERROR@" << __LINE__ << __FUNCTION__ << ": (" << std::hex << hr << std::dec << ") " << std::error_code(hr, std::system_category()).message() << std::endl; \
-            __VA_ARGS__ \
-        } \
-    } while (false)
-
 UGS_NS_BEGIN
 
 class WinRTSurface final : public PlatformSurface
 {
 public:
     WinRTSurface() : PlatformSurface() {
+        size_change_token_.value = 0;
         setNativeHandleChangeCallback([this](void* old){
             ComPtr<IInspectable> s(static_cast<IInspectable*>(nativeHandle()));
             if (old != s.Get()) { // updateNativeWindow(nullptr) called outside or resetNativeHandle(nullptr) in dtor
@@ -80,7 +72,17 @@ private:
     ComPtr<IInspectable> inspectable_;
     ComPtr<ABI::Windows::UI::Core::ICoreWindow> win_;
     ComPtr<ABI::Windows::UI::Xaml::Controls::ISwapChainPanel> panel_;
-    EventRegistrationToken size_change_token_;
+    ComPtr<ABI::Windows::UI::Xaml::IFrameworkElement> fe_;
+    ComPtr<ICoreDispatcher> dispatcher_;
+    struct {
+        ComPtr<WinUI::ISwapChainPanel> panel_;
+        ComPtr<WinUI::IFrameworkElement> fe_;
+        ComPtr<WinUI::IDispatcherQueue> dispatcher_;
+    } winui;
+    union {
+        EventRegistrationToken size_change_token_;
+        WinUI::event_token token_;
+    };
 };
 
 static float GetLogicalDpi()
@@ -88,6 +90,7 @@ static float GetLogicalDpi()
     const float kDefaultDPI = 96.0f;
     float dpi = kDefaultDPI;
 // dpi change: https://learn.microsoft.com/en-us/archive/msdn-magazine/2013/october/windows-with-c-rendering-for-the-windows-runtime
+// TODO: runtime version check
 #if _WIN32_WINNT >= 0x0602 // GetActivationFactory/HString requires win8(OneCore.lib/WindowsApp.lib). TODO: resolve from combase.dll?
 # if _WIN32_WINNT < 0x0A00
     ComPtr<ABI::Windows::Graphics::Display::IDisplayPropertiesStatics> info;
@@ -140,39 +143,7 @@ bool WinRTSurface::size(int* w, int *h) const
     return false;
 }
 
-class AgileDispatchedHandler : public RuntimeClass<RuntimeClassFlags<WinRtClassicComMix>, IDispatchedHandler, IAgileObject>
-{
-public:
-    AgileDispatchedHandler(std::function<void()> f, std::promise<bool>&& p) : f_(f), p_(std::move(p)) {}
-    HRESULT __stdcall Invoke() override {
-        f_();
-        p_.set_value(true);
-        return S_OK;
-    }
-private:
-    std::function<void()> f_;
-    std::promise<bool> p_;
-};
-
-bool RunOnUIThread(ICoreDispatcher *dispatcher, std::function<void()> f, bool wait = true)
-{
-    boolean isUI;
-    MS_ENSURE(dispatcher->get_HasThreadAccess(&isUI), false);
-    if (isUI) {
-        f();
-        return true;
-    }
-    std::promise<bool> p;
-    std::future<bool> pf = p.get_future();
-    ComPtr<IAsyncAction> op;
-    // Callback<AddFtmBase<IDispatchedHandler>::Type>(...);
-    MS_ENSURE(dispatcher->RunAsync(CoreDispatcherPriority_Normal, Make<AgileDispatchedHandler>(f, std::move(p)).Get(), &op), false);
-    if (wait)
-        return pf.get();
-    return true;
-}
-
-class SwapChainPanelSizeChangedHandler : public Microsoft::WRL::RuntimeClass<Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>, ABI::Windows::UI::Xaml::ISizeChangedEventHandler>
+class SwapChainPanelSizeChangedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ABI::Windows::UI::Xaml::ISizeChangedEventHandler, WinUI::ISizeChangedEventHandler>
 {
 public:
     HRESULT RuntimeClassInitialize(WinRTSurface* surface) {
@@ -186,6 +157,14 @@ public:
         // from angle: The size of the ISwapChainPanel control is returned in DIPs, the same unit as viewports.
         // XAML Clients of the ISwapChainPanel are required to use dips to define their layout sizes as well.
         ABI::Windows::Foundation::Size newSize;
+        MS_ENSURE(sizeChangedEventArgs->get_NewSize(&newSize), S_OK);
+        surface_->resize((int)newSize.Width, (int)newSize.Height);
+        return S_OK;
+    }
+    int32_t __stdcall Invoke(IInspectable *sender, WinUI::ISizeChangedEventArgs *sizeChangedEventArgs) noexcept override {
+        // from angle: The size of the ISwapChainPanel control is returned in DIPs, the same unit as viewports.
+        // XAML Clients of the ISwapChainPanel are required to use dips to define their layout sizes as well.
+        WinUI::Size newSize;
         MS_ENSURE(sizeChangedEventArgs->get_NewSize(&newSize), S_OK);
         surface_->resize((int)newSize.Width, (int)newSize.Height);
         return S_OK;
@@ -221,16 +200,26 @@ bool WinRTSurface::registerSizeChange()
     if (SUCCEEDED(inspectable_.As(&panel_)) && panel_) {
         ComPtr<ABI::Windows::UI::Xaml::ISizeChangedEventHandler> h;
         MS_ENSURE(Microsoft::WRL::MakeAndInitialize<SwapChainPanelSizeChangedHandler>(&h, this), false);
-        ComPtr<ABI::Windows::UI::Xaml::IFrameworkElement> fe;
-        MS_ENSURE(inspectable_.As(&fe), false);
+        MS_ENSURE(inspectable_.As(&fe_), false);
         ComPtr<ABI::Windows::UI::Xaml::IDependencyObject> dep;
         MS_ENSURE(panel_.As(&dep), false);
-        ComPtr<ICoreDispatcher> dispatcher;
-        MS_ENSURE(dep->get_Dispatcher(&dispatcher), false);
-        return RunOnUIThread(dispatcher.Get(), [=]{
-            MS_ENSURE(fe->add_SizeChanged(h.Get(), &size_change_token_), false);
+        MS_ENSURE(dep->get_Dispatcher(&dispatcher_), false);
+        return RunOnUIThread(dispatcher_.Get(), [this, h]{
+            MS_ENSURE(fe_->add_SizeChanged(h.Get(), &size_change_token_), false);
             return true;
-        }, false); // usually successed, and return value is not used, so no wait
+        }); // usually successed, and return value is not used, so no wait
+    } else if (SUCCEEDED(inspectable_.As(&winui.panel_)) && winui.panel_) {
+        ComPtr<WinUI::ISizeChangedEventHandler> h;
+        MS_ENSURE(Microsoft::WRL::MakeAndInitialize<SwapChainPanelSizeChangedHandler>(&h, this), false);
+        MS_ENSURE(inspectable_.As(&winui.fe_), false);
+        ComPtr<WinUI::IDependencyObject> dep;
+        MS_ENSURE(winui.panel_.As(&dep), false);
+        MS_ENSURE(dep->get_DispatcherQueue(&winui.dispatcher_), false);
+        return RunOnUIThread(winui.dispatcher_.Get(), [this, h]{
+            MS_ENSURE(winui.fe_->add_SizeChanged(h.Get(), &token_), false);
+            return true;
+        });
+        return true;
     }
     ComPtr<ABI::Windows::Foundation::Collections::IPropertySet> ps;
     if (SUCCEEDED(inspectable_.As(&ps)) && ps) {
@@ -265,16 +254,15 @@ void WinRTSurface::unregisterSizeChange()
         size_change_token_.value = 0;
     }
     if (panel_) {
-        ComPtr<ABI::Windows::UI::Xaml::IFrameworkElement> fe;
-        MS_ENSURE(panel_.As(&fe));
-        ComPtr<ABI::Windows::UI::Xaml::IDependencyObject> dep;
-        MS_ENSURE(panel_.As(&dep));
-        ComPtr<ICoreDispatcher> dispatcher;
-        MS_ENSURE(dep->get_Dispatcher(&dispatcher));
-        RunOnUIThread(dispatcher.Get(), [=]{
-            fe->remove_SizeChanged(size_change_token_);
+        RunOnUIThread(dispatcher_.Get(), [this]{
+            fe_->remove_SizeChanged(size_change_token_);
             size_change_token_.value = 0;
-        }, false);
+        });
+    } else if (winui.panel_) {
+        RunOnUIThread(winui.dispatcher_.Get(), [this]{
+            winui.fe_->remove_SizeChanged(token_);
+            token_.value = 0;
+        });
     }
 }
 

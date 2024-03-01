@@ -71,8 +71,8 @@ set(SRC
     RenderLoop.cpp
     )
 if(WIN32)
+  list(APPEND SRC WinRTSurface.cpp UIRun.cpp)
   if(WINDOWS_PHONE OR WINDOWS_STORE)
-    list(APPEND SRC WinRTSurface.cpp)
   else()
     list(APPEND SRC Win32Surface.cpp)
     list(APPEND EXTRA_DYLIBS user32)

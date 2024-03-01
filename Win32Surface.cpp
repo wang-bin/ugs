@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -31,7 +31,11 @@ private:
     WNDPROC orig_proc_ = nullptr;
 };
 
+extern PlatformSurface* create_winrt_surface();
+
 PlatformSurface* create_win32_surface(void* handle) {
+    if (handle && !IsWindow((HWND)handle)) // IsWindow: must call on window creation thread
+        return create_winrt_surface(); // ISwapChainPanel, ICoreWindow
     return new Win32Surface(handle);
 }
 
