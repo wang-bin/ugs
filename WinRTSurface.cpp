@@ -16,8 +16,11 @@
 #include <string>
 #include <system_error>
 #include <windows.h>
-#include <wrl.h> //
 #include <wrl/client.h>
+#if (_MSC_VER + 0) // missing headers in mingw
+#include <wrl/implements.h> // RuntimeClass
+#endif
+#include <wrl\wrappers\corewrappers.h>
 #ifdef GetCurrentTime // defined in WinBase.h, conflicts with windows.ui.xaml
 # undef GetCurrentTime
 #endif
