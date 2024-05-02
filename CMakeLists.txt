@@ -12,6 +12,8 @@ endif()
 project(${UGS_PROJECT_NAME} VERSION 0.0.0) # VERSION: cmake 3.0+
 set(TARGET_NAME ${PROJECT_NAME})
 
+option(BUILD_JMI "build jmi. android only" ON)
+
 # reset var inherited from parent
 set(EXTRA_LIBS)
 set(EXTRA_DYLIBS)
@@ -80,8 +82,13 @@ if(WIN32)
 endif()
 if(ANDROID)
 #add_compile_options(-fno-emulated-tls)
-  list(APPEND SRC AndroidSurface.cpp base/jmi/jmi.cpp)
-  set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${${PROJECT_NAME}_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
+  list(APPEND SRC AndroidSurface.cpp)
+  if(BUILD_JMI)
+    list(APPEND SRC base/jmi/jmi.cpp)
+    set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${${PROJECT_NAME}_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
+  else()
+    set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
+  endif()
   list(APPEND EXTRA_DYLIBS android log)
 endif()
 if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL Darwin OR MACCATALYST) # ios or mac catalyst
