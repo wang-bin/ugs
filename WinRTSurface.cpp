@@ -19,7 +19,6 @@
 #include <wrl/client.h>
 #if (_MSC_VER + 0) // missing headers in mingw
 #include <wrl/implements.h> // RuntimeClass
-#endif
 #include <wrl\wrappers\corewrappers.h>
 #ifdef GetCurrentTime // defined in WinBase.h, conflicts with windows.ui.xaml
 # undef GetCurrentTime
@@ -271,3 +270,8 @@ void WinRTSurface::unregisterSizeChange()
 
 PlatformSurface* create_winrt_surface() { return new WinRTSurface();}
 UGS_NS_END
+#else
+UGS_NS_BEGIN
+PlatformSurface* create_winrt_surface() { return nullptr;}
+UGS_NS_END
+#endif // _MSC_VER

@@ -6,7 +6,6 @@
 #include <wrl/client.h>
 #if (_MSC_VER + 0) // missing headers in mingw
 #include <wrl/implements.h> // RuntimeClass
-#endif
 #ifdef GetCurrentTime // defined in WinBase.h, conflicts with windows.ui.xaml
 # undef GetCurrentTime
 #endif
@@ -116,3 +115,4 @@ bool RunOnUIThread(void* d, function<void()>&& f)
     }
     return false;
 }
+#endif // (_MSC_VER + 0)
