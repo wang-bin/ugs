@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2020-2024 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -9,10 +9,10 @@
  */
 #include "ugs/PlatformSurface.h"
 #import <QuartzCore/CALayer.h>
-#if !(TARGET_OS_MACCATALYST+0)
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSView.h>
 #import <AppKit/NSWindow.h>
+#import <AppKit/NSScreen.h>
 #define USE_CFNOTIFICATION
 UGS_NS_BEGIN
 class CocoaSurface final: public PlatformSurface
@@ -84,11 +84,15 @@ public:
     bool size(int *w, int *h) const override {
         if (!view_)
             return false;
+        auto scale = view_.layer.contentsScale;
+        if (scale < 1) {
+            scale = [NSScreen mainScreen].backingScaleFactor;
+        }
         //printf("%p~~~~~~view size: %fx%f, .layer: %p, layer size: %fx%f @%f~~~~~~\n", this, view_.frame.size.width, view_.frame.size.height, view_.layer, view_.layer.bounds.size.width, view_.layer.bounds.size.height, view_.layer.contentsScale);
         if (w)
-            *w = (int)view_.frame.size.width;
+            *w = (int)(view_.frame.size.width * scale);
         if (h)
-            *h = (int)view_.frame.size.height;
+            *h = (int)(view_.frame.size.height * scale);
         return true;
     }
 private:
@@ -98,4 +102,3 @@ private:
 
 PlatformSurface* create_cocoa_surface() { return new CocoaSurface();}
 UGS_NS_END
-#endif // !(TARGET_OS_MACCATALYST+0)
