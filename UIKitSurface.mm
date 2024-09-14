@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2024 WangBin <wbsecg1 at gmail.com>
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -13,6 +13,7 @@
 #import <UIKit/UIApplication.h>
 #import <UIKit/UIView.h>
 #include <iostream>
+using namespace std;
 
 static const NSNotificationName kAppNotifications[] = {
     UIApplicationWillEnterForegroundNotification,
@@ -23,8 +24,8 @@ static const NSNotificationName kAppNotifications[] = {
 };
 
 @interface PropertyObserver : NSObject
-- (void) observeGeometryChange:(std::function<void(float,float)>)cb; //(void(^)())
-- (void) observeAppStateChange:(std::function<void(bool)>)cb; //(void(^)())
+- (void) observeGeometryChange:(function<void(float,float)>&&)cb; //(void(^)())
+- (void) observeAppStateChange:(function<void(bool)>&&)cb; //(void(^)())
 @end
 
 @implementation PropertyObserver {
@@ -32,14 +33,14 @@ static const NSNotificationName kAppNotifications[] = {
     std::function<void(bool)> app_state_cb_;
 }
 
-- (void) observeGeometryChange:(std::function<void(float,float)>)cb
+- (void) observeGeometryChange:(function<void(float,float)>&&)cb
 {
-    geo_cb_ = cb;
+    geo_cb_ = std::move(cb);
 }
 
-- (void) observeAppStateChange:(std::function<void(bool)>)cb
+- (void) observeAppStateChange:(function<void(bool)>&&)cb
 {
-    app_state_cb_ = cb;
+    app_state_cb_ = std::move(cb);
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context

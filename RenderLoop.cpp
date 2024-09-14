@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -135,7 +135,7 @@ bool RenderLoop::isRunning() const
 
 void RenderLoop::update()
 {
-    d->schedule([=]{
+    d->schedule([this]{
         // TODO: lock? what if add(surface) now?
         for (auto sp : d->surfaces) {
             if (!process(sp)) {
@@ -146,31 +146,31 @@ void RenderLoop::update()
     });
 }
 
-RenderLoop& RenderLoop::onResize(function<void(PlatformSurface*,int,int,RenderContext)> cb)
+RenderLoop& RenderLoop::onResize(const function<void(PlatformSurface*,int,int,RenderContext)>& cb)
 {
     d->resize_cb = cb;
     return *this;
 }
 
-RenderLoop& RenderLoop::onDraw(function<bool(PlatformSurface*, RenderContext)> cb)
+RenderLoop& RenderLoop::onDraw(const function<bool(PlatformSurface*, RenderContext)>& cb)
 {
     d->draw_cb = cb;
     return *this;
 }
 
-RenderLoop& RenderLoop::onContextCreated(function<void(PlatformSurface*,void*)> cb)
+RenderLoop& RenderLoop::onContextCreated(const function<void(PlatformSurface*,void*)>& cb)
 {
     d->ctx_created_cb = cb;
     return *this;
 }
 
-RenderLoop& RenderLoop::onDestroyContext(function<void(PlatformSurface*,void*)> cb)
+RenderLoop& RenderLoop::onDestroyContext(const function<void(PlatformSurface*,void*)>& cb)
 {
     d->ctx_destroy_cb = cb;
     return *this;
 }
 
-RenderLoop& RenderLoop::onClose(function<void(PlatformSurface*)> cb)
+RenderLoop& RenderLoop::onClose(const function<void(PlatformSurface*)>& cb)
 {
     d->close_cb = cb;
     return *this;

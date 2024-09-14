@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -39,15 +39,15 @@ public:
     // takes the ownership. but surface ptr can be accessed before close. To remove surface, call surface->close()
     std::weak_ptr<PlatformSurface> add(PlatformSurface* surface);
     /// the following functions are called in rendering thread
-    RenderLoop& onResize(std::function<void(PlatformSurface*, int w, int h, RenderContext)> cb);
+    RenderLoop& onResize(const std::function<void(PlatformSurface*, int w, int h, RenderContext)>& cb);
     // draw callback requres RenderContext parameter for d3d11, vulkan. opengl does not need it because context is implicit
-    RenderLoop& onDraw(std::function<bool(PlatformSurface*, RenderContext)> cb);
+    RenderLoop& onDraw(const std::function<bool(PlatformSurface*, RenderContext)>& cb);
     // callback after context is created
-    RenderLoop& onContextCreated(std::function<void(PlatformSurface*, RenderContext)> cb);
+    RenderLoop& onContextCreated(const std::function<void(PlatformSurface*, RenderContext)>& cb);
     // callback before destroying context. For example, happens when resetNativeHandle(nullptr)=>close()
-    RenderLoop& onDestroyContext(std::function<void(PlatformSurface*, RenderContext)> cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
+    RenderLoop& onDestroyContext(const std::function<void(PlatformSurface*, RenderContext)>& cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
     // callback before surface close after context is destroyed
-    RenderLoop& onClose(std::function<void(PlatformSurface*)> cb); // called when surface is about to be destroyed
+    RenderLoop& onClose(const std::function<void(PlatformSurface*)>& cb); // called when surface is about to be destroyed
 protected:
     virtual void* createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx) = 0;

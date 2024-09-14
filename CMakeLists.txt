@@ -19,13 +19,7 @@ set(EXTRA_LIBS)
 set(EXTRA_DYLIBS)
 set(EXTRA_LIB_DIR)
 
-# https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/ (global and specified target)
-# https://bugs.llvm.org/show_bug.cgi?id=42843 # <type_traits> lld-link: error: duplicate symbol: bool const std::_Is_integral<bool> in a.obj and in b.obj
-if(CMAKE_C_COMPILER_ID MATCHES Clang AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0)
-  set(CMAKE_CXX_STANDARD 20)
-else()
-  set(CMAKE_CXX_STANDARD 20)
-endif()
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #SET(CMAKE_VERBOSE_MAKEFILE ON)

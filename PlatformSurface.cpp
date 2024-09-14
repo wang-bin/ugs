@@ -12,6 +12,7 @@
 #if (__APPLE__+0)
 # include <TargetConditionals.h> // TARGET_OS_IPHONE/OSX
 #endif
+using namespace std;
 
 UGS_NS_BEGIN
 extern PlatformSurface* create_android_surface();
@@ -140,7 +141,7 @@ void PlatformSurface::resetNativeHandle(void* handle)
         PlatformSurface::resize(w, h);
 }
 
-void PlatformSurface::setNativeHandleChangeCallback(std::function<void(void*)> cb)
+void PlatformSurface::setNativeHandleChangeCallback(const function<void(void*)>& cb)
 {
     d->handle_cb = cb;
 }
@@ -150,7 +151,7 @@ void* PlatformSurface::nativeHandle() const
     return d->native_handle;
 }
 
-void PlatformSurface::setEventCallback(std::function<void()> cb)
+void PlatformSurface::setEventCallback(const function<void()>& cb)
 {
     d->cb = cb;
 }

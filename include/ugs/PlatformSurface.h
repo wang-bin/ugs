@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -64,7 +64,7 @@ public:
     static PlatformSurface* create(void* handle, Type type = Type::Default);
     virtual ~PlatformSurface();
     Type type() const;
-    void setEventCallback(std::function<void()> cb); // TODO: void(Event) as callback and remove event queue which can be implemented externally
+    void setEventCallback(const std::function<void()>& cb); // TODO: void(Event) as callback and remove event queue which can be implemented externally
     //
     void resetNativeHandle(void* h);
     void* nativeHandle() const;
@@ -92,7 +92,7 @@ protected:
     // call in your ctor if want to observe the changes. the callback is called resetNativeHandle() parameter is a different handle.
     // can not use virtual method in resetNativeHandle() because it may be called in ctor
     // NOTE: it's recommended to call resize(w, h) in the callback
-    void setNativeHandleChangeCallback(std::function<void(void* old)> cb);
+    void setNativeHandleChangeCallback(const std::function<void(void* old)>& cb);
 
     PlatformSurface(Type type = Type::Default);
 private:
