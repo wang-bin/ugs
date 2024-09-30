@@ -13,6 +13,7 @@
 #import <UIKit/UIApplication.h>
 #import <UIKit/UIView.h>
 #include <iostream>
+#include <mutex>
 using namespace std;
 
 static const NSNotificationName kAppNotifications[] = {
