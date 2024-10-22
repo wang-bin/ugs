@@ -13,6 +13,8 @@
 #include <iostream>
 #include <linux/input-event-codes.h>
 
+_Pragma("weak wl_proxy_marshal_constructor_versioned") // wayland 1.10. inlined in wl_registry_bind(), ubuntu >= 17.10
+
 using namespace std;
 UGS_NS_BEGIN
 WaylandSurface::WaylandSurface() : PlatformSurface(Type::Wayland)
