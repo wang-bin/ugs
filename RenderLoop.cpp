@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2025 WangBin <wbsecg1 at gmail.com>
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -183,14 +183,14 @@ weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
     // TODO: lock?
     const unique_lock lock(d->mtx);
     d->surfaces.push_back(sp);
-    surface->setEventCallback([=]{ // TODO: void(Event e)
-        d->schedule([=]{
+    surface->setEventCallback([sp, this]{ // TODO: void(Event e)
+        d->schedule([sp, this]{
             if (!process(sp)) {
                 clog << "surface removed by event callback..." << endl;
             }
         });
     });
-    d->schedule([=]{
+    d->schedule([sp, this]{
         if (!process(sp)) { // create=>resize=>close event in 1 process()
             clog << "deleting surface scheduled by surface add callback..." << endl;
             const unique_lock lock(d->mtx);
@@ -260,8 +260,8 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             if (d->ctx_created_cb)
                 d->ctx_created_cb(surface, ctx);
             sp->ctx = ctx;
-            surface->setEventCallback([=]{ // TODO: void(Event e)
-                d->schedule([=]{
+            surface->setEventCallback([sp, this]{ // TODO: void(Event e)
+                d->schedule([sp, this]{
                     if (!process(sp)) {
                         clog << "surface removed by event callback..." << endl;
                     }
