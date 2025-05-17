@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2025 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <iostream>
@@ -19,6 +19,11 @@ _Pragma("weak gbm_bo_get_stride")
 
 // make the whole library weak so that it(and dependencies)'s not required by rpath-link (ld.bfd), but need to preload at runtime if link with --as-needed
 UGS_NS_BEGIN
+
+static uint32_t fourcc_value(const char* name) {
+    return uint32_t(name[0]) | (uint32_t(name[1]) << 8) | (uint32_t(name[2]) << 16) | (uint32_t(name[3]) << 24);
+}
+
 class GBMSurface final: public PlatformSurface
 {
 public:
@@ -106,7 +111,14 @@ GBMSurface::GBMSurface() : PlatformSurface(Type::GBM)
         return;
     }
     dev_ = gbm_create_device(drm_fd_);
-    surf_ = gbm_surface_create(dev_, mode_.hdisplay, mode_.vdisplay, GBM_FORMAT_XRGB8888, GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
+    // ARGB8888 for es and XRGB for desktop? https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/934
+    // TODO: GBM_FORMAT_XBGR8888, XBGR2101010, XRGB2101010
+    // rk3588 debian11 seems only supports AR24 in EGLConfig(EGL_NATIVE_VISUAL_ID)
+    auto fmt = GBM_FORMAT_ARGB8888; // AR24
+    if (const auto env = getenv("GBM_FORMAT")) {
+        fmt = fourcc_value(env);
+    }
+    surf_ = gbm_surface_create(dev_, mode_.hdisplay, mode_.vdisplay, fmt, GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
     resetNativeHandle(surf_);
 }
 
