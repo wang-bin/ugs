@@ -1,5 +1,9 @@
 /*
  * Copyright (c) 2017-2025 WangBin <wbsecg1 at gmail.com>
+
+// https://manpages.debian.org/jessie/libdrm-dev/drm-kms.7.en.html
+// run `sudo service gdm/lightdm stop` to test gbm
+
  */
 #include "ugs/PlatformSurface.h"
 #include <iostream>
@@ -16,9 +20,11 @@ _Pragma("weak gbm_surface_destroy")
 _Pragma("weak gbm_surface_release_buffer")
 _Pragma("weak gbm_surface_lock_front_buffer")
 _Pragma("weak gbm_bo_get_stride")
+_Pragma("weak drmGetDevices2") // since 2016
 
 // make the whole library weak so that it(and dependencies)'s not required by rpath-link (ld.bfd), but need to preload at runtime if link with --as-needed
 UGS_NS_BEGIN
+using namespace std;
 
 static uint32_t fourcc_value(const char* name) {
     return uint32_t(name[0]) | (uint32_t(name[1]) << 8) | (uint32_t(name[2]) << 16) | (uint32_t(name[3]) << 24);
@@ -39,6 +45,8 @@ public:
         return true;
     }
 private:
+    bool initFdConnector(int card);
+
     int drm_fd_ = 0;
     drmModeConnector *connector_ = nullptr;
     drmModeModeInfo mode_ = {};
@@ -58,47 +66,87 @@ int get_drm_fd(int card)
     return open(dev_path, O_RDWR|O_CLOEXEC);
 }
 
-int get_drm_fd()
+
+drmModeConnector* get_connector(int fd)
 {
-    int card = 0;
-    char* n = getenv("DRM_NUM");
-    if (n)
-        card = atoi(n);
-    else
-        std::clog << "env var DRM_NUM is not set, assume it's 0" << std::endl;
-    return get_drm_fd(card);
+    auto res = drmModeGetResources(fd);
+    if (!res)
+        return nullptr;
+    for (int i = 0; i < res->count_connectors; ++i) {
+        if (auto c = drmModeGetConnector(fd, res->connectors[i])) {
+            if (c->connection == DRM_MODE_CONNECTED && c->count_modes > 0) {
+                drmModeFreeResources(res);
+                return c;
+            }
+            drmModeFreeConnector(c);
+        }
+    }
+    drmModeFreeResources(res);
+    return nullptr;
 }
 
-drmModeConnector* get_connector(int fd, drmModeRes* res)
+bool GBMSurface::initFdConnector(int card)
 {
-    for (int i = 0; i < res->count_connectors; ++i) {
-        drmModeConnector *c = drmModeGetConnector(fd, res->connectors[i]);
-        if (!c)
-            continue;
-        if (c->connection == DRM_MODE_CONNECTED && c->count_modes > 0)
-            return c;
-        drmModeFreeConnector(c);
+    drmDevice *devs[DRM_MAX_MINOR] = {};
+    int count = 0;
+    if (drmGetDevices2) {
+        count = drmGetDevices2(0, devs, std::size(devs));
+    } else {
+        count = drmGetDevices(devs, std::size(devs));
     }
-    return nullptr;
+    if (count <= 0) {
+        clog << "drmGetDevices error" << endl;
+        return false;
+    }
+    if (card >= count) {
+        clog << "invalid DRM card number. max: " + std::to_string(count) << endl;
+        return false;
+    }
+    for (int i = std::max<int>(card, 0); i < count; ++i) {
+        drmDevice *dev = devs[i];
+        if (!(dev->available_nodes & (1 << DRM_NODE_PRIMARY))) {
+            clog << "no primary node for DRM card " + std::to_string(i) << endl;
+            if (card >= 0) // set by user
+                return false;
+            continue;
+        }
+        const char *card_path = dev->nodes[DRM_NODE_PRIMARY];
+        clog << "testing DRM card " + std::to_string(i) + ", path: " + card_path << endl;
+        if (auto fd = open(card_path, O_RDWR|O_CLOEXEC); fd >= 0) {
+            // drmIsKMS(fd)
+            if (auto connector = get_connector(fd)) {
+                drm_fd_ = fd;
+                connector_ = connector;
+                clog << "select DRM card " + std::to_string(i) + ", path: " + card_path << endl;
+                return true;
+            } else {
+                clog << "DRM card " + std::to_string(i) + ": no connector " << endl;
+                if (card >= 0)
+                    return false;
+            }
+            ::close(fd);
+        }
+    }
+    return false;
+}
+
+static double get_Hz(const drmModeModeInfo& mode)
+{
+    double rate = mode.clock * 1000.0 / mode.htotal / mode.vtotal;
+    if (mode.flags & DRM_MODE_FLAG_INTERLACE)
+        rate *= 2.0;
+    return rate;
 }
 
 GBMSurface::GBMSurface() : PlatformSurface(Type::GBM)
 {
     if (!gbm_surface_create)
         return;
-    drm_fd_ = get_drm_fd();
-    if (drm_fd_ < 0) {
-        std::clog << "failed to open drm card" << std::endl;
+    char* env = getenv("DRM_CARD");
+    if (!initFdConnector(env ? atoi(env) : -1)) {
         return;
     }
-    drmModeRes *res = drmModeGetResources(drm_fd_);
-    connector_ = get_connector(drm_fd_, res);
-    drmModeFreeResources(res);
-    if (!connector_) {
-        std::clog << "failed to get connector" << std::endl;
-        return;
-    }
-    mode_ = connector_->modes[0]; //
+    // crtc
     drmModeEncoder *enc = drmModeGetEncoder(drm_fd_, connector_->encoder_id);
     if (!enc) {
         std::clog << "failed to get encoder" << std::endl;
@@ -109,6 +157,16 @@ GBMSurface::GBMSurface() : PlatformSurface(Type::GBM)
     if (!crtc_) {
         std::clog << "failed to get crtc" << std::endl;
         return;
+    }
+    // mode
+    mode_ = connector_->modes[0];
+    env = getenv("DRM_MODE");
+    const int midx = env ? atoi(env) : 0;
+    mode_ = connector_->modes[midx];
+    for (unsigned i = 0; i < connector_->count_modes; ++i) {
+        const auto& m = connector_->modes[i];
+        // m.type & DRM_MODE_TYPE_PREFERRED ?
+        clog << "  Mode " + std::to_string(i) + " :" + m.name + " - " + std::to_string(m.hdisplay) + "x" + std::to_string(m.hdisplay) + "@" + std::to_string(get_Hz(m)) + "Hz" + (i == midx ? " - Selected" : "") << endl;
     }
     dev_ = gbm_create_device(drm_fd_);
     // ARGB8888 for es and XRGB for desktop? https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/934
