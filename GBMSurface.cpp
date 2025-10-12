@@ -90,9 +90,9 @@ bool GBMSurface::initFdConnector(int card)
     drmDevice *devs[DRM_MAX_MINOR] = {};
     int count = 0;
     if (drmGetDevices2) {
-        count = drmGetDevices2(0, devs, std::size(devs));
+        count = drmGetDevices2(0, devs, std::size(devs)); // 2016
     } else {
-        count = drmGetDevices(devs, std::size(devs));
+        count = drmGetDevices(devs, std::size(devs)); // 2015
     }
     if (count <= 0) {
         clog << "drmGetDevices error" << endl;
@@ -107,7 +107,7 @@ bool GBMSurface::initFdConnector(int card)
         if (!(dev->available_nodes & (1 << DRM_NODE_PRIMARY))) {
             clog << "no primary node for DRM card " + std::to_string(i) << endl;
             if (card >= 0) // set by user
-                return false;
+                break;
             continue;
         }
         const char *card_path = dev->nodes[DRM_NODE_PRIMARY];
@@ -118,16 +118,17 @@ bool GBMSurface::initFdConnector(int card)
                 drm_fd_ = fd;
                 connector_ = connector;
                 clog << "select DRM card " + std::to_string(i) + ", path: " + card_path << endl;
-                return true;
+                break;
             } else {
                 clog << "DRM card " + std::to_string(i) + ": no connector " << endl;
-                if (card >= 0)
-                    return false;
             }
             ::close(fd);
+            if (card >= 0)
+                break;
         }
     }
-    return false;
+    drmFreeDevices(devs, count);
+    return !!connector_;
 }
 
 static double get_Hz(const drmModeModeInfo& mode)
