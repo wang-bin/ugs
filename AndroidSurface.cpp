@@ -2,7 +2,7 @@
  they are hook_XXX() with the same Surface parameter
  */
 /*
- * Copyright (c) 2017-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2025 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <jni.h>
@@ -67,7 +67,8 @@ public:
         PlatformSurface::resize(w, h);
         if (w0 == w && h0 == h)
             return;
-        ANativeWindow_setBuffersGeometry(anw_, w, h, WINDOW_FORMAT_RGBA_8888);
+        const auto fmt = ANativeWindow_getFormat(anw_);
+        ANativeWindow_setBuffersGeometry(anw_, w, h, fmt); // prevent tearing
     }
 private:
     ANativeWindow* anw_ = nullptr;
