@@ -77,13 +77,10 @@ endif()
 if(ANDROID)
 #add_compile_options(-fno-emulated-tls)
   list(APPEND SRC AndroidSurface.cpp)
-  if(BUILD_JMI)
-    list(APPEND SRC base/jmi/jmi.cpp)
-    set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${${PROJECT_NAME}_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
-  else()
-    set_property(SOURCE AndroidSurface.cpp APPEND PROPERTY COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}/base") # COMPILE_OPTIONS/INCLUDE_DIRECTORIES does not work
+  if(BUILD_JMI AND NOT TARGET jmi)
+    add_subdirectory(base/jmi)
   endif()
-  list(APPEND EXTRA_DYLIBS android log)
+  list(APPEND EXTRA_DYLIBS android log jmi)
 endif()
 if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL Darwin OR MACCATALYST) # ios or mac catalyst
   list(APPEND SRC UIKitSurface.mm)
@@ -190,7 +187,9 @@ else()
   target_link_libraries(${TARGET_NAME} PRIVATE ${EXTRA_DYLIBS})
 endif()
 
-setup_deploy(${TARGET_NAME})
+if(BUILD_JMI)
+  setup_deploy(${TARGET_NAME})
+endif()
 
 if(UGS_EXAMPLES)
   add_subdirectory(examples)

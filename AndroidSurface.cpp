@@ -2,7 +2,7 @@
  they are hook_XXX() with the same Surface parameter
  */
 /*
- * Copyright (c) 2017-2025 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2017-2026 WangBin <wbsecg1 at gmail.com>
  */
 #include "ugs/PlatformSurface.h"
 #include <jni.h>
@@ -68,6 +68,7 @@ public:
         if (w0 == w && h0 == h)
             return;
         const auto fmt = ANativeWindow_getFormat(anw_);
+// no error but format won't change, only surface holder can set. default is rgb565
         ANativeWindow_setBuffersGeometry(anw_, w, h, fmt); // prevent tearing
     }
 private:
