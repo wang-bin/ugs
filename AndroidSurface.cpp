@@ -3,13 +3,17 @@
  */
 /*
  * Copyright (c) 2017-2026 WangBin <wbsecg1 at gmail.com>
+ * AI participated
  */
 #include "ugs/PlatformSurface.h"
 #include <jni.h>
 #include <android/native_window_jni.h>
 #include "jmi/jmi.h"
+#include <memory>
+#include <mutex>
 
 UGS_NS_BEGIN
+using namespace std;
 void* javaVM(void* vm)
 {
     return jmi::javaVM(static_cast<JavaVM*>(vm));
@@ -20,45 +24,53 @@ class AndroidSurface final : public PlatformSurface
 public:
     AndroidSurface() : PlatformSurface() {
         setNativeHandleChangeCallback([this](void* old){
-            jobject s = static_cast<jobject>(nativeHandle());
+            const auto s = static_cast<jobject>(nativeHandle());
             if (old != s) { // updateNativeWindow(nullptr) called outside or resetNativeHandle(nullptr) in dtor
-                if (anw_)
-                    ANativeWindow_release(anw_);
+                shared_ptr<ANativeWindow> next;
+                if (s) {
+                    if (auto anw = ANativeWindow_fromSurface(jmi::getEnv(), s))
+                        next = {anw, ANativeWindow_release};
+                }
+                const scoped_lock lock(mtx_);
+                anw_.swap(next);
             }
-            anw_ = nullptr;
-            if (!s)
-                return;
-            anw_ = ANativeWindow_fromSurface(jmi::getEnv(), s);
         });
-    }
-    ~AndroidSurface() override {
-        if (anw_)
-            ANativeWindow_release(anw_);
-        anw_ = nullptr;
     }
 
     void* nativeHandleForVulkan() const override {
-        return anw_;
+        const scoped_lock lock(mtx_);
+        return anw_.get();
     }
 
     void* nativeHandleForGL() const override {
-        return anw_;
+        const scoped_lock lock(mtx_);
+        return anw_.get();
+    }
+
+    shared_ptr<void> retainNativeHandleForVulkan() const override {
+        return window();
+    }
+
+    shared_ptr<void> retainNativeHandleForGL() const override {
+        return window();
     }
 
     bool size(int* w, int *h) const override {
-        if (!anw_)
+        const auto anw = window();
+        if (!anw)
             return false;
         if (w)
-            *w = ANativeWindow_getWidth(anw_);
+            *w = ANativeWindow_getWidth(anw.get());
         if (h)
-            *h = ANativeWindow_getHeight(anw_);
+            *h = ANativeWindow_getHeight(anw.get());
         return true;
     }
     void resize(int w, int h) override {
-        if (!anw_)
+        const auto anw = window();
+        if (!anw)
             return;
-        const int w0 = ANativeWindow_getWidth(anw_);
-        const int h0 = ANativeWindow_getHeight(anw_);
+        const int w0 = ANativeWindow_getWidth(anw.get());
+        const int h0 = ANativeWindow_getHeight(anw.get());
         if (w <= 0 || h <= 0) {
             w = w0;
             h = h0;
@@ -67,12 +79,18 @@ public:
         PlatformSurface::resize(w, h);
         if (w0 == w && h0 == h)
             return;
-        const auto fmt = ANativeWindow_getFormat(anw_);
+        const auto fmt = ANativeWindow_getFormat(anw.get());
 // no error but format won't change, only surface holder can set. default is rgb565
-        ANativeWindow_setBuffersGeometry(anw_, w, h, fmt); // prevent tearing
+        ANativeWindow_setBuffersGeometry(anw.get(), w, h, fmt); // prevent tearing
     }
 private:
-    ANativeWindow* anw_ = nullptr;
+    shared_ptr<ANativeWindow> window() const {
+        const scoped_lock lock(mtx_);
+        return anw_;
+    }
+
+    mutable mutex mtx_;
+    shared_ptr<ANativeWindow> anw_;
 };
 
 PlatformSurface* create_android_surface() { return new AndroidSurface();}

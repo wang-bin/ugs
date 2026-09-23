@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2026 WangBin <wbsecg1 at gmail.com>
+ * AI participated
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -12,6 +13,7 @@
 #include <limits>
 #include "export.h"
 #include <functional>
+#include <memory>
 
 UGS_NS_BEGIN
 /*!
@@ -75,6 +77,9 @@ public:
      */
     virtual void* nativeHandleForVulkan() const { return nativeHandle();}
     virtual void* nativeHandleForGL() const { return nativeHandle();}
+// Keep the native handle alive while a render context uses it.
+    virtual std::shared_ptr<void> retainNativeHandleForVulkan() const {return {nativeHandleForVulkan(), [](void*){}};}
+    virtual std::shared_ptr<void> retainNativeHandleForGL() const {return {nativeHandleForGL(), [](void*){}};}
     virtual void* nativeResource() const {return nullptr;} // extra resource required by gfx context, e.g. wayland and x11 display
     virtual void submit() {}
     virtual bool size(int *w, int *h) const {return false;}
