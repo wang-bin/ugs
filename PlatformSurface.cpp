@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2026 WangBin <wbsecg1 at gmail.com>
+ * AI participated
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -9,6 +10,9 @@
  */
 #include "ugs/PlatformSurface.h"
 #include "base/mpsc_fifo.h"
+#include <atomic>
+#include <mutex>
+#include <utility>
 #if (__APPLE__+0)
 # include <TargetConditionals.h> // TARGET_OS_IPHONE/OSX
 #endif
@@ -98,10 +102,11 @@ class PlatformSurface::Private
 public:
     bool closed = false;
     PlatformSurface::Type type = PlatformSurface::Type::Default;
-    void* native_handle = nullptr;
+    atomic<void*> native_handle{nullptr};
     std::function<void(void*)> handle_cb = nullptr;
     std::function<void()> cb = nullptr;
     mpsc_fifo<PlatformSurface::Event> events;
+    mutex event_mtx;
 };
 
 PlatformSurface::PlatformSurface(Type type)
@@ -122,10 +127,10 @@ PlatformSurface::Type PlatformSurface::type() const
 
 void PlatformSurface::resetNativeHandle(void* handle)
 {
-    if (d->native_handle == handle) // TODO: no check, used to check resize in callback
+    const auto old = d->native_handle.load(memory_order::relaxed);
+    if (old == handle) // TODO: no check, used to check resize in callback
         return;
-    auto old = d->native_handle;
-    d->native_handle = handle;
+    d->native_handle.store(handle, memory_order::release);
     // NativeHandleEvent must be posted after nativeHandleForGL is valid, before resize
     if (d->handle_cb)
         d->handle_cb(old);
@@ -148,11 +153,12 @@ void PlatformSurface::setNativeHandleChangeCallback(const function<void(void*)>&
 
 void* PlatformSurface::nativeHandle() const
 {
-    return d->native_handle;
+    return d->native_handle.load(memory_order::acquire);
 }
 
 void PlatformSurface::setEventCallback(const function<void()>& cb)
 {
+    const scoped_lock lock(d->event_mtx);
     d->cb = cb;
 }
 
@@ -166,8 +172,16 @@ void PlatformSurface::resize(int w, int h)
 
 void PlatformSurface::close()
 {
-    pushEvent(Event{Event::Close});
-    d->closed = true;
+    function<void()> cb;
+    {
+        const scoped_lock lock(d->event_mtx);
+        if (std::exchange(d->closed, true))
+            return;
+        d->events.push(Event{Event::Close});
+        cb = d->cb;
+    }
+    if (cb)
+        cb();
 }
 
 bool PlatformSurface::popEvent(Event &e)
@@ -180,11 +194,16 @@ bool PlatformSurface::popEvent(Event &e)
 
 void PlatformSurface::pushEvent(Event&& e)
 {
-    if (d->closed) // no pending events for closed surface
-        return;
-    d->events.push(std::move(e));
+    function<void()> cb;
+    {
+        const scoped_lock lock(d->event_mtx);
+        if (d->closed) // no pending events for closed surface
+            return;
+        d->events.push(std::move(e));
+        cb = d->cb;
+    }
     // TODO: user listeners
-    if (d->cb)
-        d->cb();
+    if (cb)
+        cb();
 }
 UGS_NS_END
