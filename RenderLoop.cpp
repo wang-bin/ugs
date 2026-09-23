@@ -102,9 +102,13 @@ bool RenderLoop::start(bool stop_on_last_surface_closed)
 {
     if (d->running.load(memory_order::acquire))
         return true;
+// A stopped render thread remains joinable until waitForStopped() or the next start().
+    if (d->render_thread.joinable())
+        d->render_thread.join();
+    d->stop_requested.store(false, memory_order::release);
     d->running.store(true, memory_order::release);
     d->stop_on_last_close = stop_on_last_surface_closed;
-    if (d->use_thread) { // check joinable?
+    if (d->use_thread) {
         d->render_thread = std::thread([this]{
             std::clog << "Rendering thread @" << std::this_thread::get_id() << std::endl;
             d->run();
@@ -132,9 +136,15 @@ void RenderLoop::waitForStopped()
         return;
     }
     while (d->running.load(memory_order::acquire)) {
-        unique_lock lock(d->mtx);
-        for (const auto& sp : d->surfaces)
+// Snapshot under lock; processEvents outside so Close erase on the render thread is not blocked for the whole native poll.
+        vector<shared_ptr<SurfaceContext>> surfaces;
+        {
+            const scoped_lock lock(d->mtx);
+            surfaces.assign(d->surfaces.begin(), d->surfaces.end());
+        }
+        for (const auto& sp : surfaces)
             sp->surface->processEvents(); // MPSC
+        unique_lock lock(d->mtx);
         d->stopped_cv.wait_for(lock, 10ms, [this]{
             return !d->running.load(memory_order::acquire);
         });
