@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016-2024 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2026 WangBin <wbsecg1 at gmail.com>
+ * AI participated
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -57,7 +58,7 @@ protected:
 private:
     class SurfaceContext;
     // process surface events and do rendering. return input surface, or null if surface is no longer used, e.g. closed
-    PlatformSurface* process(SurfaceContext* sp);
+    PlatformSurface* process(std::shared_ptr<SurfaceContext> sp);
     // TODO: frame advance service abstraction(clock, vsync, user)
     class Private;
     Private* d;

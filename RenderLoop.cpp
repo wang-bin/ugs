@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016-2025 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2016-2026 WangBin <wbsecg1 at gmail.com>
+ * AI participated
  * This file is part of UGS (Universal Graphics Surface)
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -11,14 +12,19 @@
 #include "ugs/PlatformSurface.h"
 #include "base/BlockingQueue.h"
 #include <cassert>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <thread>
+#include <vector>
 #include <iostream>
 
 //// TODO: frame rendering can be driven by frame push, master clock, vsync, subtitle(hi fps sub, but must < vsync fps), any of above conditions triggered, post update event in render loop
 UGS_NS_BEGIN
 using namespace std;
+using namespace std::chrono;
 
 class RenderLoop::SurfaceContext {
 public:
@@ -37,28 +43,41 @@ public:
         tasks.push(std::move(task));
     }
 
+    void wakeRenderThread() {
+        schedule([]{});
+    }
+
+    void notifyStopped() {
+        running.store(false, memory_order::release);
+        stopped_cv.notify_all();
+    }
+
     void run() {
-        running = true;
+        running.store(true, memory_order::release);
         std::clog << this << " start RenderLoop" << std::endl;
         while (true) { // TODO: lock free? semaphore?
             function<void()> task;
             tasks.pop(task);
             if (task)
                 task();
-            if (stop_requested && surfaces.empty())
-                break;
+            if (stop_requested.load(memory_order::acquire)) {
+                const unique_lock lock(mtx);
+                if (surfaces.empty())
+                    break;
+            }
         }
-        running = false;
+        notifyStopped();
     }
 
     bool use_thread = true;
-    bool stop_requested = false;
-    bool running = false;
+    atomic<bool> stop_requested{false};
+    atomic<bool> running{false};
     bool stop_on_last_close = true;
     mutex mtx;
+    condition_variable stopped_cv;
     thread render_thread;
 
-    list<RenderLoop::SurfaceContext*> surfaces;
+    list<shared_ptr<RenderLoop::SurfaceContext>> surfaces;
     function<void(PlatformSurface*,int,int, RenderContext)> resize_cb = nullptr;
     function<bool(PlatformSurface*, RenderContext)> draw_cb = nullptr;
     function<void(PlatformSurface*)> close_cb = nullptr;
@@ -81,9 +100,9 @@ RenderLoop::~RenderLoop()
 
 bool RenderLoop::start(bool stop_on_last_surface_closed)
 {
-    if (d->running)
+    if (d->running.load(memory_order::acquire))
         return true;
-    d->running = true;
+    d->running.store(true, memory_order::release);
     d->stop_on_last_close = stop_on_last_surface_closed;
     if (d->use_thread) { // check joinable?
         d->render_thread = std::thread([this]{
@@ -98,12 +117,12 @@ void RenderLoop::stop()
 {
     if (!isRunning())
         return;
-    d->stop_requested = true;
-    // call once per loop, so no lock
+    d->stop_requested.store(true, memory_order::release);
     const unique_lock lock(d->mtx);
-    for (auto sp : d->surfaces) {
+    for (const auto& sp : d->surfaces) {
         sp->surface->close();
     }
+    d->wakeRenderThread();
 }
 
 void RenderLoop::waitForStopped()
@@ -112,17 +131,13 @@ void RenderLoop::waitForStopped()
         d->run();
         return;
     }
-    while (d->running) {
-        {
-            const unique_lock lock(d->mtx);
-            // surfaces.erase() on close.
-            // TODO: lock free, schedule a task so in the same thread as ease(still has mutext in task queue)? main thread?
-            // cow?
-            for (auto sp : d->surfaces) {
-                sp->surface->processEvents(); // MPSC
-            }
-        }
-        this_thread::sleep_for(chrono::milliseconds(10)); // TODO: poll native events?
+    while (d->running.load(memory_order::acquire)) {
+        unique_lock lock(d->mtx);
+        for (const auto& sp : d->surfaces)
+            sp->surface->processEvents(); // MPSC
+        d->stopped_cv.wait_for(lock, 10ms, [this]{
+            return !d->running.load(memory_order::acquire);
+        });
     }
     if (d->render_thread.joinable())
         d->render_thread.join();
@@ -130,14 +145,18 @@ void RenderLoop::waitForStopped()
 
 bool RenderLoop::isRunning() const
 {
-    return d->running;
+    return d->running.load(memory_order::acquire);
 }
 
 void RenderLoop::update()
 {
     d->schedule([this]{
-        // TODO: lock? what if add(surface) now?
-        for (auto sp : d->surfaces) {
+        vector<shared_ptr<SurfaceContext>> surfaces;
+        {
+            const scoped_lock lock(d->mtx);
+            surfaces.assign(d->surfaces.begin(), d->surfaces.end());
+        }
+        for (const auto& sp : surfaces) {
             if (!process(sp)) {
                 clog << "surface removed, skip current update" << endl;
                 break;
@@ -179,30 +198,35 @@ RenderLoop& RenderLoop::onClose(const function<void(PlatformSurface*)>& cb)
 weak_ptr<PlatformSurface> RenderLoop::add(PlatformSurface *surface)
 {
     const shared_ptr<PlatformSurface> ss(surface);
-    auto sp = new SurfaceContext{ss, nullptr};
-    // TODO: lock?
-    const unique_lock lock(d->mtx);
-    d->surfaces.push_back(sp);
-    surface->setEventCallback([sp, this]{ // TODO: void(Event e)
-        d->schedule([sp, this]{
-            if (!process(sp)) {
-                clog << "surface removed by event callback..." << endl;
+    const auto sp = make_shared<SurfaceContext>();
+    sp->surface = ss;
+    {
+        const unique_lock lock(d->mtx);
+        d->surfaces.push_back(sp);
+    }
+    const weak_ptr<SurfaceContext> ws(sp);
+    surface->setEventCallback([ws, this]{ // TODO: void(Event e)
+        d->schedule([ws, this]{
+            if (auto sp = ws.lock()) {
+                if (!process(sp))
+                    clog << "surface removed while processing queued event" << endl;
+            } else {
+                clog << "surface already removed, skip queued event" << endl;
             }
         });
     });
-    d->schedule([sp, this]{
-        if (!process(sp)) { // create=>resize=>close event in 1 process()
-            clog << "deleting surface scheduled by surface add callback..." << endl;
-            const unique_lock lock(d->mtx);
-            auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
-            delete *it;
-            d->surfaces.erase(it); // gcc4.8 can not erase a const_iterator
+    d->schedule([ws, this]{
+        if (auto sp = ws.lock()) { // create=>resize=>close event in 1 process()
+            if (!process(sp))
+                clog << "surface removed while processing queued add task" << endl;
+        } else {
+            clog << "surface already removed, skip queued add task" << endl;
         }
     });
     return ss;
 }
 
-PlatformSurface* RenderLoop::process(SurfaceContext *sp)
+PlatformSurface* RenderLoop::process(shared_ptr<SurfaceContext> sp)
 {
     PlatformSurface* surface = sp->surface.get();
     void* ctx = sp->ctx;
@@ -221,14 +245,17 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             if (d->close_cb)
                 d->close_cb(surface);
             surface->release();
-            auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
             const unique_lock lock(d->mtx);
+            auto it = find(d->surfaces.begin(), d->surfaces.end(), sp);
+            if (it == d->surfaces.end())
+                return nullptr;
             clog << "removing closed surface..." << endl;
             d->surfaces.erase(it);
-            delete sp;
-            if (d->stop_on_last_close && d->surfaces.empty())
-                d->stop_requested = true;
-            return nullptr; // FIXME
+            if (d->stop_on_last_close && d->surfaces.empty()) {
+                d->stop_requested.store(true, memory_order::release);
+                d->wakeRenderThread();
+            }
+            return nullptr;
         } else if (e.type == PlatformSurface::Event::Resize) {
             sp->width = e.size.width;
             sp->height = e.size.height;
@@ -260,13 +287,6 @@ PlatformSurface* RenderLoop::process(SurfaceContext *sp)
             if (d->ctx_created_cb)
                 d->ctx_created_cb(surface, ctx);
             sp->ctx = ctx;
-            surface->setEventCallback([sp, this]{ // TODO: void(Event e)
-                d->schedule([sp, this]{
-                    if (!process(sp)) {
-                        clog << "surface removed by event callback..." << endl;
-                    }
-                });
-            });
             if (!surface->acquire())
                 return surface;
             activateRenderContext(surface, ctx);
