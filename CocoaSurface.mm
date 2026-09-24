@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2020-2024 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2020-2026 WangBin <wbsecg1 at gmail.com>
+ * AI participated
  * Universal Graphics Surface
  * Source code: https://github.com/wang-bin/ugs
  *
@@ -15,6 +16,25 @@
 #import <AppKit/NSScreen.h>
 #define USE_CFNOTIFICATION
 UGS_NS_BEGIN
+// Surface events use backing pixels; NSView geometry and CALayer frames use points.
+static CGSize backing_size(NSView* view)
+{
+    auto size = [view convertSizeToBacking:view.bounds.size];
+    if (size.width <= 0 || size.height <= 0) {
+        auto scale = view.window ? view.window.backingScaleFactor : view.layer.contentsScale;
+        if (scale < 1)
+            scale = [NSScreen mainScreen].backingScaleFactor;
+        size = CGSizeMake(view.bounds.size.width * scale, view.bounds.size.height * scale);
+    }
+    return size;
+}
+
+static void resize_surface(PlatformSurface* surface, NSView* view)
+{
+    const auto size = backing_size(view);
+    surface->resize(static_cast<int>(size.width), static_cast<int>(size.height));
+}
+
 class CocoaSurface final: public PlatformSurface
 {
 public:
@@ -51,7 +71,7 @@ public:
                 , [](CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo){
                     auto s = static_cast<CocoaSurface*>(observer);
                     auto view = (__bridge NSView*)object;
-                    s->resize(static_cast<int>(view.layer.frame.size.width*view.layer.contentsScale), static_cast<int>(view.layer.frame.size.height*view.layer.contentsScale));
+                    resize_surface(s, view);
                 }
                 , CFSTR("NSViewFrameDidChangeNotification")
                 , (const void*)view_
@@ -62,7 +82,7 @@ public:
                 object:view_
                 queue:[NSOperationQueue mainQueue] // or nil
                 usingBlock:^(NSNotification *note) {
-                    resize(view_.frame.size.width*view.layer.contentsScale, view_.frame.size.height*view.layer.contentsScale);
+                    resize_surface(this, view_);
             }];
 #endif
         });
@@ -84,15 +104,12 @@ public:
     bool size(int *w, int *h) const override {
         if (!view_)
             return false;
-        auto scale = view_.layer.contentsScale;
-        if (scale < 1) {
-            scale = [NSScreen mainScreen].backingScaleFactor;
-        }
-        //printf("%p~~~~~~view size: %fx%f, .layer: %p, layer size: %fx%f @%f~~~~~~\n", this, view_.frame.size.width, view_.frame.size.height, view_.layer, view_.layer.bounds.size.width, view_.layer.bounds.size.height, view_.layer.contentsScale);
+        const auto size = backing_size(view_);
+        printf("%p~~~~~~view size: %fx%f, .layer: %p, layer size: %fx%f @%f~~~~~~\n", this, view_.frame.size.width, view_.frame.size.height, view_.layer, view_.layer.bounds.size.width, view_.layer.bounds.size.height, view_.layer.contentsScale);
         if (w)
-            *w = (int)(view_.frame.size.width * scale);
+            *w = (int)size.width;
         if (h)
-            *h = (int)(view_.frame.size.height * scale);
+            *h = (int)size.height;
         return true;
     }
 private:
