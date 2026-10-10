@@ -46,7 +46,9 @@ public:
     // callback after context is created
     RenderLoop& onContextCreated(const std::function<void(PlatformSurface*, RenderContext)>& cb);
     // callback before destroying context. For example, happens when resetNativeHandle(nullptr)=>close()
-    RenderLoop& onDestroyContext(const std::function<void(PlatformSurface*, RenderContext)>& cb); // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
+    // called when gfx context on the surface is about to be destroyed. User can destroy gfx resources in the callback
+    // TODO: add `void* nativeHandle` parameter in callback? surface nativeHandle() is null when this callback is invoked, previous value is useful.
+    RenderLoop& onDestroyContext(const std::function<void(PlatformSurface*, RenderContext)>& cb);
     // callback before surface close after context is destroyed
     RenderLoop& onClose(const std::function<void(PlatformSurface*)>& cb); // called when surface is about to be destroyed
 protected:
