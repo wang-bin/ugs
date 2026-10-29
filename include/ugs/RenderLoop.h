@@ -52,6 +52,8 @@ public:
     // callback before surface close after context is destroyed
     RenderLoop& onClose(const std::function<void(PlatformSurface*)>& cb); // called when surface is about to be destroyed
 protected:
+    virtual void lockRenderContext(void*) {}
+    virtual void unlockRenderContext(void*) {}
     virtual void* createRenderContext(PlatformSurface* surface) = 0;
     virtual bool destroyRenderContext(PlatformSurface* surface, void* ctx) = 0;
     virtual bool activateRenderContext(PlatformSurface* surface, void* ctx) = 0;

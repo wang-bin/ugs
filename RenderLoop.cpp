@@ -242,6 +242,10 @@ PlatformSurface* RenderLoop::process(shared_ptr<SurfaceContext> sp)
     void* ctx = sp->ctx;
     if (!surface->acquire())
         return surface;
+// Serialize context use with platform callbacks that update the drawable.
+    auto unlock = [this](void* c) { unlockRenderContext(c); };
+    unique_ptr<void, decltype(unlock)> guard(ctx, unlock);
+    lockRenderContext(ctx);
     activateRenderContext(surface, ctx);
     PlatformSurface::Event e{};
     while (surface->popEvent(e)) {
@@ -250,6 +254,7 @@ PlatformSurface* RenderLoop::process(shared_ptr<SurfaceContext> sp)
             if (ctx) {
                 if (d->ctx_destroy_cb)
                     d->ctx_destroy_cb(surface, ctx);
+                guard.reset();
                 destroyRenderContext(surface, ctx);
             }
             if (d->close_cb)
@@ -283,6 +288,7 @@ PlatformSurface* RenderLoop::process(shared_ptr<SurfaceContext> sp)
             if (e.handle.before && ctx) {
                 if (d->ctx_destroy_cb)
                     d->ctx_destroy_cb(surface, ctx);
+                guard.reset();
                 destroyRenderContext(surface, ctx);
             }
             sp->ctx = nullptr;
@@ -299,6 +305,8 @@ PlatformSurface* RenderLoop::process(shared_ptr<SurfaceContext> sp)
             sp->ctx = ctx;
             if (!surface->acquire())
                 return surface;
+            lockRenderContext(ctx);
+            guard.reset(ctx);
             activateRenderContext(surface, ctx);
         }
     }
